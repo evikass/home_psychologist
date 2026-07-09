@@ -52,3 +52,10 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# sandbox / local artifacts
+/.zscripts/dev.pid
+/db/*.db
+/db/*.db-journal
+/download/*.png
+/worklog.md
