@@ -84,7 +84,13 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error || "Не удалось получить диагноз.");
+        // Если есть детальная информация об env-переменных — показываем её
+        const envInfo = data?.env_detected
+          ? `\n\nСостояние переменных:\n${Object.entries(data.env_detected)
+              .map(([k, v]) => `  ${k}: ${v}`)
+              .join("\n")}\n\nПодробнее: /api/debug-env`
+          : "";
+        throw new Error((data?.error || "Не удалось получить диагноз.") + envInfo);
       }
       setResult(data as DiagnoseResponse);
     } catch (e) {
@@ -224,17 +230,28 @@ export default function Home() {
         {error && !loading && (
           <div className="mt-6 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive flex items-start gap-3">
             <TriangleAlert className="h-5 w-5 shrink-0 mt-0.5" />
-            <div>
+            <div className="flex-1">
               <p className="font-medium">Не получилось.</p>
-              <p className="text-foreground/70 mt-0.5">{error}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={handleSubmit}
-              >
-                Попробовать ещё раз
-              </Button>
+              <pre className="text-foreground/70 mt-1 whitespace-pre-wrap font-sans text-xs leading-relaxed">
+                {error}
+              </pre>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSubmit}
+                >
+                  Попробовать ещё раз
+                </Button>
+                <a
+                  href="/api/debug-env"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center h-8 px-3 text-xs rounded-md border bg-background hover:bg-accent transition-colors"
+                >
+                  Проверить переменные окружения →
+                </a>
+              </div>
             </div>
           </div>
         )}

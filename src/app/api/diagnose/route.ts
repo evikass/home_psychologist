@@ -14,21 +14,39 @@ export const maxDuration = 60;
 /**
  * Создаёт клиент Z.ai.
  * Приоритет конфигурации:
- *   1. Env-переменные ZAI_API_KEY + ZAI_BASE_URL (Vercel, продакшн)
+ *   1. Env-переменные (Vercel, продакшн)
  *   2. Файл .z-ai-config (локальная разработка, песочница)
+ *
+ * Поддерживаемые имена env-переменных (пробуем несколько для надёжности):
+ *   - ZAI_API_KEY (рекомендуемое)
+ *   - Z_AI_API_KEY
+ *   - ZAI_KEY
+ *   - OPENAI_API_KEY (на случай, если пользователь перепутал)
  */
 async function createZai() {
-  const envKey = process.env.ZAI_API_KEY || process.env.Z_AI_API_KEY;
+  const envKey =
+    process.env.ZAI_API_KEY ||
+    process.env.Z_AI_API_KEY ||
+    process.env.ZAI_KEY ||
+    process.env.OPENAI_API_KEY;
+
   const envUrl =
     process.env.ZAI_BASE_URL ||
     process.env.Z_AI_BASE_URL ||
     "https://api.z.ai/api/paas/v4";
 
   if (envKey) {
+    console.log(
+      "[diagnose] Using Z.ai client from env var, key length:",
+      envKey.length,
+      "url:",
+      envUrl
+    );
     // Создаём клиент напрямую, минуя чтение файла .z-ai-config
     return new ZAI({ baseUrl: envUrl, apiKey: envKey });
   }
 
+  console.log("[diagnose] No env var found, falling back to .z-ai-config file");
   // Fallback: используем стандартный create(), который ищет .z-ai-config
   return await ZAI.create();
 }
@@ -193,14 +211,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "На сервере не настроен ключ Z.AI. Добавьте ZAI_API_KEY в переменные окружения на Vercel. Инструкция: https://z.ai",
+            "На Vercel не задана переменная окружения ZAI_API_KEY. Откройте Vercel → ваш проект → Settings → Environment Variables → добавьте ZAI_API_KEY с вашим ключом от https://z.ai → затем Deployments → Redeploy. Подробная инструкция в README.",
+          env_detected: {
+            ZAI_API_KEY: process.env.ZAI_API_KEY ? "✓ set" : "✗ missing",
+            Z_AI_API_KEY: process.env.Z_AI_API_KEY ? "✓ set" : "✗ missing",
+            ZAI_KEY: process.env.ZAI_KEY ? "✓ set" : "✗ missing",
+          },
         },
         { status: 500 }
       );
     }
 
     return NextResponse.json(
-      { error: "Сервис недоступен. Попробуйте через минуту." },
+      { error: "Сервис недоступен. " + msg },
       { status: 500 }
     );
   }
