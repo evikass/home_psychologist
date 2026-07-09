@@ -11,6 +11,28 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+/**
+ * Создаёт клиент Z.ai.
+ * Приоритет конфигурации:
+ *   1. Env-переменные ZAI_API_KEY + ZAI_BASE_URL (Vercel, продакшн)
+ *   2. Файл .z-ai-config (локальная разработка, песочница)
+ */
+async function createZai() {
+  const envKey = process.env.ZAI_API_KEY || process.env.Z_AI_API_KEY;
+  const envUrl =
+    process.env.ZAI_BASE_URL ||
+    process.env.Z_AI_BASE_URL ||
+    "https://api.z.ai/api/paas/v4";
+
+  if (envKey) {
+    // Создаём клиент напрямую, минуя чтение файла .z-ai-config
+    return new ZAI({ baseUrl: envUrl, apiKey: envKey });
+  }
+
+  // Fallback: используем стандартный create(), который ищет .z-ai-config
+  return await ZAI.create();
+}
+
 /** Безопасный парсинг JSON-ответа LLM — модель иногда оборачивает в ```json */
 function extractJson(raw: string): unknown {
   let text = raw.trim();
@@ -121,7 +143,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const zai = await ZAI.create();
+    const zai = await createZai();
 
     const completion = await zai.chat.completions.create({
       messages: [
@@ -164,6 +186,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(parsed);
   } catch (err) {
     console.error("[diagnose] fatal:", err);
+    const msg = (err as Error)?.message ?? "Unknown error";
+
+    // Чёткое сообщение, если проблема в ключе Z.ai
+    if (msg.includes("Configuration file not found") || msg.includes("config")) {
+      return NextResponse.json(
+        {
+          error:
+            "На сервере не настроен ключ Z.AI. Добавьте ZAI_API_KEY в переменные окружения на Vercel. Инструкция: https://z.ai",
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Сервис недоступен. Попробуйте через минуту." },
       { status: 500 }

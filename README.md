@@ -48,16 +48,39 @@ bun run dev
 
 Откройте http://localhost:3000
 
-## Конфигурация
+## Конфигурация LLM (Z.ai / GLM-4)
 
-Для работы LLM создайте файл `.z-ai-config` в корне:
+Для живого ИИ-анализа нужен API-ключ Z.ai. Есть два способа настройки:
+
+### Локальная разработка — файл `.z-ai-config`
+
+Создайте файл `.z-ai-config` в корне проекта (уже в `.gitignore`):
 
 ```json
 {
-  "baseUrl": "https://api.example.com/v1",
-  "apiKey": "YOUR_API_KEY"
+  "baseUrl": "https://api.z.ai/api/paas/v4",
+  "apiKey": "ВАШ_КЛЮЧ"
 }
 ```
+
+### Продакшн на Vercel — переменные окружения
+
+В настройках Vercel-проекта (Settings → Environment Variables) добавьте:
+
+- **`ZAI_API_KEY`** — ваш ключ Z.ai (обязательно)
+- **`ZAI_BASE_URL`** — `https://api.z.ai/api/paas/v4` (опционально, по умолчанию уже этот)
+
+После добавления переменных сделайте Redeploy в Vercel.
+
+### Как получить бесплатный ключ Z.ai
+
+1. Зарегистрируйтесь на **https://z.ai** (бесплатный тариф даёт ~$18 кредита)
+2. Перейдите в **API Keys** → https://z.ai/manage/apikey
+3. Создайте новый ключ, скопируйте его
+4. Добавьте его как `ZAI_API_KEY` в Vercel Environment Variables
+
+Без ключа на Vercel приложение вернёт ошибку 500 при попытке диагноза —
+это ожидаемое поведение. Демо-версия на GitHub Pages работает без ключа.
 
 ## Деплой
 
