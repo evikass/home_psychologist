@@ -23,7 +23,11 @@ import {
 import { DiagnosisCard } from "@/components/diagnosis-card";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
 import { METHODOLOGY_SUMMARY, LEVELS, EMOTIONS } from "@/lib/masterkit-data";
+import { getDemoDiagnosis } from "@/lib/demo-diagnoses";
 import { toast } from "sonner";
+
+// В demo-режиме (GitHub Pages) ИИ-анализ недоступен — используем предзаготовленные диагнозы.
+const IS_DEMO = process.env.NEXT_PUBLIC_STATIC_DEMO === "true";
 
 const EXAMPLES = [
   {
@@ -63,7 +67,16 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setResult(null);
+
     try {
+      if (IS_DEMO) {
+        // GitHub Pages: статическая версия, ИИ недоступен.
+        // Симулируем задержку для UX и подбираем диагноз по ключевым словам.
+        await new Promise((r) => setTimeout(r, 1200));
+        setResult(getDemoDiagnosis(text));
+        return;
+      }
+
       const res = await fetch("/api/diagnose", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -369,6 +382,14 @@ function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
           <Sparkles className="h-3 w-3 mr-1" />
           Методика Дарьи Трутневой
         </Badge>
+        {IS_DEMO && (
+          <Badge
+            variant="outline"
+            className="mb-3 ml-2 text-[11px] border-amber-400/50 text-amber-700 bg-amber-50"
+          >
+            Демо-версия
+          </Badge>
+        )}
         <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight tracking-tight">
           Где вы застряли —
           <br />
@@ -378,6 +399,13 @@ function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
           Опишите свою ситуацию своими словами — как жалобное письмо другу. ИИ
           определит уровень развития, застрявшую эмоцию, эмоциональную яму и
           подберёт точные проработки на этот момент.
+          {IS_DEMO && (
+            <span className="block mt-2 text-xs text-amber-700/90">
+              ⚠️ Это демо-версия на GitHub Pages — использует предзаготовленные
+              диагнозы по ключевым словам. Для живого ИИ-анализа используйте
+              полную версию.
+            </span>
+          )}
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
