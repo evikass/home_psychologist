@@ -18,6 +18,9 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
+// basePath для иконок — на GitHub Pages нужен префикс /home_psychologist
+const ICON_BASE = process.env.STATIC_EXPORT === "true" ? "/home_psychologist" : "";
+
 export const metadata: Metadata = {
   title: "Домашний психолог · ИИ-диагностика и самотерапия",
   description:
@@ -37,12 +40,12 @@ export const metadata: Metadata = {
   authors: [{ name: "Домашний психолог" }],
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: `${ICON_BASE}/favicon.svg`, type: "image/svg+xml" },
     ],
     apple: [
-      { url: "/apple-touch-icon.svg", type: "image/svg+xml" },
+      { url: `${ICON_BASE}/apple-touch-icon.svg`, type: "image/svg+xml" },
     ],
-    shortcut: ["/favicon.svg"],
+    shortcut: [`${ICON_BASE}/favicon.svg`],
   },
   openGraph: {
     title: "Домашний психолог · ИИ-диагностика",
@@ -51,7 +54,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.svg",
+        url: `${ICON_BASE}/og-image.svg`,
         width: 1200,
         height: 630,
         alt: "Домашний психолог — ИИ-диагностика и самотерапия",
@@ -63,7 +66,7 @@ export const metadata: Metadata = {
     title: "Домашний психолог · ИИ-диагностика",
     description:
       "Опишите ситуацию — получите эмоциональный разбор и персональные практики для самотерапии.",
-    images: ["/og-image.svg"],
+    images: [`${ICON_BASE}/og-image.svg`],
   },
 };
 
