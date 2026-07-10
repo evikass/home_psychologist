@@ -17,6 +17,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MIPS_LEVELS, BRAINWAVE_STATES } from "@/lib/neurotransforming-data";
 import type { NeuroDiagnosis } from "@/app/api/neuro-diagnose/route";
+import {
+  MipsMiniDiagram,
+  BrainwaveMiniBar,
+  NeuroCycleMini,
+  IntegrationTimeline,
+} from "@/components/neuro-mini-diagrams";
 
 const STATE_COLORS: Record<string, string> = {
   beta: "#dc2626",
@@ -103,35 +109,42 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
             {data.mips_level.id} / 8
           </Badge>
         </div>
-        <div
-          className="rounded-xl border-2 p-4"
-          style={{
-            backgroundColor: `${mipsLevelData?.color ?? "#525252"}11`,
-            borderColor: mipsLevelData?.color ?? "#525252",
-          }}
-        >
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          {/* Текстовое описание */}
           <div
-            className="font-display text-xl font-bold mb-1"
-            style={{ color: mipsLevelData?.color ?? "#525252" }}
+            className="rounded-xl border-2 p-4 flex-1 min-w-0 w-full"
+            style={{
+              backgroundColor: `${mipsLevelData?.color ?? "#525252"}11`,
+              borderColor: mipsLevelData?.color ?? "#525252",
+            }}
           >
-            {data.mips_level.name}
-          </div>
-          <p
-            className="text-sm leading-relaxed mb-2"
-            style={{ color: mipsLevelData?.color ?? "#525252" }}
-          >
-            {data.mips_level.explanation}
-          </p>
-          {mipsLevelData && (
-            <div className="pt-2 border-t" style={{ borderColor: `${mipsLevelData.color}33` }}>
-              <div className="text-[10px] uppercase tracking-wide font-semibold mb-1 opacity-70" style={{ color: mipsLevelData.color }}>
-                Что меняется на этом уровне
-              </div>
-              <p className="text-xs" style={{ color: mipsLevelData.color }}>
-                {mipsLevelData.whatChanges}
-              </p>
+            <div
+              className="font-display text-xl font-bold mb-1"
+              style={{ color: mipsLevelData?.color ?? "#525252" }}
+            >
+              {data.mips_level.name}
             </div>
-          )}
+            <p
+              className="text-sm leading-relaxed mb-2"
+              style={{ color: mipsLevelData?.color ?? "#525252" }}
+            >
+              {data.mips_level.explanation}
+            </p>
+            {mipsLevelData && (
+              <div className="pt-2 border-t" style={{ borderColor: `${mipsLevelData.color}33` }}>
+                <div className="text-[10px] uppercase tracking-wide font-semibold mb-1 opacity-70" style={{ color: mipsLevelData.color }}>
+                  Что меняется на этом уровне
+                </div>
+                <p className="text-xs" style={{ color: mipsLevelData.color }}>
+                  {mipsLevelData.whatChanges}
+                </p>
+              </div>
+            )}
+          </div>
+          {/* Графическая пирамида */}
+          <div className="shrink-0 w-full sm:w-auto">
+            <MipsMiniDiagram activeLevel={data.mips_level.id} />
+          </div>
         </div>
         <div className="mt-2 text-[10px] text-muted-foreground text-center">
           Уровень {data.mips_level.id} из 8 · глубже → сложнее изменить, но изменения устойчивее
@@ -176,6 +189,10 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
             </div>
           )}
         </div>
+        {/* Графическая шкала ритмов */}
+        <div className="mt-3">
+          <BrainwaveMiniBar activeState={data.recommended_state.id} />
+        </div>
       </Block>
 
       {/* 5. Цикл нейротрансформации */}
@@ -190,6 +207,10 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
           <p className="text-xs text-muted-foreground mb-3">
             5 этапов работы с программой — от диагностики до интеграции
           </p>
+          {/* Графический поток этапов */}
+          <div className="mb-4 rounded-lg bg-secondary/30 p-3">
+            <NeuroCycleMini stages={data.cycle} />
+          </div>
           <div className="space-y-2">
             {data.cycle.map((stage, i) => (
               <div
@@ -291,22 +312,16 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
               {data.integration_plan.daily_practice}
             </p>
           </div>
-          {data.integration_plan.checkpoints.length > 0 && (
-            <div>
-              <Separator className="mb-3" />
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">
-                Контрольные точки
-              </div>
-              <ul className="space-y-1.5">
-                {data.integration_plan.checkpoints.map((cp, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
-                    <span className="text-foreground/80">{cp}</span>
-                  </li>
-                ))}
-              </ul>
+          {/* Графический таймлайн */}
+          <div className="pt-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+              Таймлайн интеграции
             </div>
-          )}
+            <IntegrationTimeline
+              durationDays={data.integration_plan.duration_days}
+              checkpoints={data.integration_plan.checkpoints}
+            />
+          </div>
         </div>
       </Block>
 
