@@ -37,6 +37,8 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { useI18n } from "@/components/language-provider";
 import { ConsultantModal } from "@/components/consultant-modal";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
+import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
+import type { NeuroDiagnosis } from "@/app/api/neuro-diagnose/route";
 import {
   useDiagnosisHistory,
   type HistoryEntry,
@@ -45,6 +47,7 @@ import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
 import { METHODOLOGY_SUMMARY, LEVELS, EMOTIONS, CONCEPTS, METHODS } from "@/lib/masterkit-data";
 import { getDemoDiagnosis } from "@/lib/demo-diagnoses";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // В demo-режиме (GitHub Pages) ИИ-анализ недоступен — используем предзаготовленные диагнозы.
 const IS_DEMO = process.env.NEXT_PUBLIC_STATIC_DEMO === "true";
@@ -83,6 +86,8 @@ export default function Home() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [consultantOpen, setConsultantOpen] = useState(false);
   const [neuroOpen, setNeuroOpen] = useState(false);
+  const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro">("standard");
+  const [neuroResult, setNeuroResult] = useState<NeuroDiagnosis | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -103,8 +108,29 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setNeuroResult(null);
 
     try {
+      // Нейро-режим — отдельный API эндпоинт
+      if (diagnosisMode === "neuro") {
+        if (IS_DEMO) {
+          toast.info("Нейро-диагноз доступен только в полной версии на Vercel.");
+          setLoading(false);
+          return;
+        }
+        const res = await fetch("/api/neuro-diagnose", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || "Не удалось получить нейро-диагноз.");
+        }
+        setNeuroResult(data as NeuroDiagnosis);
+        return;
+      }
+
       if (IS_DEMO) {
         // GitHub Pages: статическая версия, ИИ недоступен.
         // Симулируем задержку для UX и подбираем диагноз по ключевым словам.
@@ -183,6 +209,7 @@ export default function Home() {
   const handleReset = () => {
     setText("");
     setResult(null);
+    setNeuroResult(null);
     setCurrentEntryId(null);
     setCurrentDoneProcessings([]);
     setError(null);
@@ -191,14 +218,15 @@ export default function Home() {
   const handleExample = (ex: string) => {
     setText(ex);
     setResult(null);
+    setNeuroResult(null);
     setError(null);
   };
 
   useEffect(() => {
-    if (result && resultRef.current) {
+    if ((result || neuroResult) && resultRef.current) {
       resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [result]);
+  }, [result, neuroResult]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -220,7 +248,7 @@ export default function Home() {
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-24 safe-x">
         {/* HERO */}
-        {!result && !loading && (
+        {!result && !neuroResult && !loading && (
           <Hero onPickExample={handleExample} />
         )}
 
@@ -237,12 +265,42 @@ export default function Home() {
         )}
 
         {/* ФОРМА ВВОДА — всегда, если нет результата */}
-        {!result && (
+        {!result && !neuroResult && (
           <section
             id="form"
             className="mt-6 sm:mt-10 scroll-mt-4"
             aria-label="Форма описания ситуации"
           >
+            {/* Переключатель режимов диагноза */}
+            <div className="flex gap-1 p-1 bg-secondary/50 rounded-lg mb-4 max-w-md mx-auto">
+              <button
+                type="button"
+                onClick={() => setDiagnosisMode("standard")}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs transition-all",
+                  diagnosisMode === "standard"
+                    ? "bg-background shadow-sm text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Стандартный разбор
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiagnosisMode("neuro")}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs transition-all",
+                  diagnosisMode === "neuro"
+                    ? "bg-background shadow-sm text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Brain className="h-3.5 w-3.5" />
+                Нейро-разбор (Ковалёв)
+              </button>
+            </div>
+
             <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
               <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
@@ -413,10 +471,39 @@ export default function Home() {
               />
             </motion.div>
           )}
+
+          {/* НЕЙРО-РЕЗУЛЬТАТ */}
+          {neuroResult && !loading && (
+            <motion.div
+              ref={resultRef}
+              key="neuro-result"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="mt-6 scroll-mt-4"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display text-lg sm:text-xl font-semibold flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-primary" />
+                  Нейро-разбор
+                </h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReset}
+                  className="rounded-full"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  {t("result.new")}
+                </Button>
+              </div>
+              <NeuroDiagnosisCard data={neuroResult} />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* МЕТОДИКА — раскрывающийся блок */}
-        {!result && (
+        {!result && !neuroResult && (
           <Accordion type="single" collapsible className="mt-12">
             <AccordionItem
               value="method"
