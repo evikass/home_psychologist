@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import ZAI from "z-ai-web-dev-sdk";
 import {
   SYSTEM_PROMPT,
   VALID_EMOTION_IDS,
@@ -13,61 +12,100 @@ export const maxDuration = 60;
 
 /**
  * Создаёт клиент Z.ai.
- * Приоритет конфигурации:
- *   1. Env-переменные (Vercel, продакшн)
- *   2. Файл .z-ai-config (локальная разработка, песочница)
- *
  * Поддерживаемые имена env-переменных (пробуем несколько для надёжности):
  *   - ZAI_API_KEY (рекомендуемое)
  *   - Z_AI_API_KEY
  *   - ZAI_KEY
- *   - OPENAI_API_KEY (на случай, если пользователь перепутал)
  */
-async function createZai() {
-  const envKey =
+function getZaiConfig() {
+  const apiKey =
     process.env.ZAI_API_KEY ||
     process.env.Z_AI_API_KEY ||
-    process.env.ZAI_KEY ||
-    process.env.OPENAI_API_KEY;
+    process.env.ZAI_KEY;
 
-  const envUrl =
+  const baseUrl =
     process.env.ZAI_BASE_URL ||
     process.env.Z_AI_BASE_URL ||
     "https://api.z.ai/api/paas/v4";
 
-  if (envKey) {
-    console.log(
-      "[diagnose] Using Z.ai client from env var, key length:",
-      envKey.length,
-      "url:",
-      envUrl
-    );
-    // Создаём клиент напрямую, минуя чтение файла .z-ai-config
-    return new ZAI({ baseUrl: envUrl, apiKey: envKey });
-  }
+  return { apiKey, baseUrl };
+}
 
-  console.log("[diagnose] No env var found, falling back to .z-ai-config file");
-  // Fallback: используем стандартный create(), который ищет .z-ai-config
-  return await ZAI.create();
+/** Прямой вызов Z.ai API с таймаутом и подробным логированием */
+async function callZaiChat(
+  apiKey: string,
+  baseUrl: string,
+  systemPrompt: string,
+  userText: string
+): Promise<{ ok: true; content: string } | { ok: false; status: number; body: string }> {
+  const url = `${baseUrl}/chat/completions`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 45000); // 45 сек таймаут
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "glm-4-flash", // быстрая и дешёвая модель
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userText },
+        ],
+        temperature: 0.6,
+        max_tokens: 2000,
+        thinking: { type: "disabled" },
+      }),
+      signal: controller.signal,
+    });
+
+    const bodyText = await response.text();
+
+    if (!response.ok) {
+      console.error(
+        `[diagnose] Z.ai API error: status=${response.status} body=${bodyText.slice(0, 500)}`
+      );
+      return { ok: false, status: response.status, body: bodyText };
+    }
+
+    let data: unknown;
+    try {
+      data = JSON.parse(bodyText);
+    } catch {
+      console.error("[diagnose] Z.ai response not JSON:", bodyText.slice(0, 500));
+      return { ok: false, status: 502, body: "Invalid JSON from Z.ai" };
+    }
+
+    const content =
+      (data as { choices?: { message?: { content?: string } }[] })?.choices?.[0]?.message
+        ?.content ?? "";
+
+    if (!content) {
+      console.error("[diagnose] Z.ai returned empty content. Full response:", bodyText.slice(0, 800));
+      return { ok: false, status: 502, body: "Empty content in Z.ai response" };
+    }
+
+    return { ok: true, content };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /** Безопасный парсинг JSON-ответа LLM — модель иногда оборачивает в ```json */
 function extractJson(raw: string): unknown {
   let text = raw.trim();
-
-  // снять markdown-обёртку
   if (text.startsWith("```")) {
     text = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
   }
-
-  // найти первый { и последний }
   const first = text.indexOf("{");
   const last = text.lastIndexOf("}");
   if (first === -1 || last === -1 || last <= first) {
     throw new Error("В ответе LLM нет валидного JSON-объекта");
   }
-  const slice = text.slice(first, last + 1);
-  return JSON.parse(slice);
+  return JSON.parse(text.slice(first, last + 1));
 }
 
 function validateDiagnosis(d: unknown): DiagnoseResponse {
@@ -161,57 +199,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const zai = await createZai();
+    const { apiKey, baseUrl } = getZaiConfig();
 
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: text },
-      ],
-      temperature: 0.6,
-      max_tokens: 2400,
-      thinking: { type: "disabled" },
-    });
-
-    const raw = completion.choices?.[0]?.message?.content ?? "";
-    if (!raw) {
-      return NextResponse.json(
-        { error: "ИИ не вернул ответ. Попробуйте ещё раз." },
-        { status: 502 }
-      );
-    }
-
-    let parsed: DiagnoseResponse;
-    try {
-      parsed = validateDiagnosis(extractJson(raw));
-    } catch (e) {
-      console.error(
-        "[diagnose] parse error:",
-        (e as Error).message,
-        "\nraw:",
-        raw.slice(0, 500)
-      );
+    if (!apiKey) {
       return NextResponse.json(
         {
           error:
-            "Не удалось разобрать диагноз ИИ. Попробуйте переформулировать или повторить.",
-          raw_preview: raw.slice(0, 400),
-        },
-        { status: 502 }
-      );
-    }
-
-    return NextResponse.json(parsed);
-  } catch (err) {
-    console.error("[diagnose] fatal:", err);
-    const msg = (err as Error)?.message ?? "Unknown error";
-
-    // Чёткое сообщение, если проблема в ключе Z.ai
-    if (msg.includes("Configuration file not found") || msg.includes("config")) {
-      return NextResponse.json(
-        {
-          error:
-            "На Vercel не задана переменная окружения ZAI_API_KEY. Откройте Vercel → ваш проект → Settings → Environment Variables → добавьте ZAI_API_KEY с вашим ключом от https://z.ai → затем Deployments → Redeploy. Подробная инструкция в README.",
+            "На Vercel не задана переменная окружения ZAI_API_KEY. Откройте Vercel → ваш проект → Settings → Environment Variables → добавьте ZAI_API_KEY с вашим ключом от https://z.ai → затем Deployments → Redeploy.",
           env_detected: {
             ZAI_API_KEY: process.env.ZAI_API_KEY ? "✓ set" : "✗ missing",
             Z_AI_API_KEY: process.env.Z_AI_API_KEY ? "✓ set" : "✗ missing",
@@ -222,6 +216,84 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    console.log(
+      `[diagnose] start: text_length=${text.length}, key_length=${apiKey.length}, url=${baseUrl}`
+    );
+
+    const result = await callZaiChat(apiKey, baseUrl, SYSTEM_PROMPT, text);
+
+    if (!result.ok) {
+      // Чёткое сообщение об ошибке авторизации
+      if (result.status === 401) {
+        return NextResponse.json(
+          {
+            error:
+              "Ключ Z.ai невалиден или истёк (401 Unauthorized). Создайте новый на https://z.ai/manage/apikey и обновите переменную ZAI_API_KEY в Vercel.",
+            zai_status: result.status,
+            zai_body: result.body.slice(0, 300),
+          },
+          { status: 502 }
+        );
+      }
+      if (result.status === 403) {
+        return NextResponse.json(
+          {
+            error:
+              "Доступ к Z.ai API запрещён (403). Проверьте, что у ключа есть права на chat completions и аккаунт активен.",
+            zai_status: result.status,
+            zai_body: result.body.slice(0, 300),
+          },
+          { status: 502 }
+        );
+      }
+      if (result.status === 429) {
+        return NextResponse.json(
+          {
+            error:
+              "Превышен лимит запросов к Z.ai (429). Подождите минуту или пополните баланс на https://z.ai.",
+            zai_status: result.status,
+            zai_body: result.body.slice(0, 300),
+          },
+          { status: 502 }
+        );
+      }
+      return NextResponse.json(
+        {
+          error: `Z.ai API вернул ошибку ${result.status}. Проверьте Vercel Logs.`,
+          zai_status: result.status,
+          zai_body: result.body.slice(0, 500),
+        },
+        { status: 502 }
+      );
+    }
+
+    console.log(`[diagnose] got content, length=${result.content.length}`);
+
+    let parsed: DiagnoseResponse;
+    try {
+      parsed = validateDiagnosis(extractJson(result.content));
+    } catch (e) {
+      console.error(
+        "[diagnose] parse error:",
+        (e as Error).message,
+        "\nraw:",
+        result.content.slice(0, 500)
+      );
+      return NextResponse.json(
+        {
+          error:
+            "Не удалось разобрать диагноз ИИ. Попробуйте переформулировать или повторить.",
+          raw_preview: result.content.slice(0, 400),
+        },
+        { status: 502 }
+      );
+    }
+
+    console.log("[diagnose] success");
+    return NextResponse.json(parsed);
+  } catch (err) {
+    console.error("[diagnose] fatal:", err);
+    const msg = (err as Error)?.message ?? "Unknown error";
     return NextResponse.json(
       { error: "Сервис недоступен. " + msg },
       { status: 500 }
