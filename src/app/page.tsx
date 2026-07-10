@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3,
   BookOpen,
+  BookText,
   Brain,
   ChevronRight,
   HelpCircle,
@@ -39,6 +40,8 @@ import { ConsultantModal } from "@/components/consultant-modal";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
 import type { NeuroDiagnosis } from "@/app/api/neuro-diagnose/route";
+import { TaleDiagnosisCard } from "@/components/tale-diagnosis-card";
+import type { TaleDiagnosis } from "@/app/api/tale-diagnose/route";
 import {
   useDiagnosisHistory,
   type HistoryEntry,
@@ -86,8 +89,9 @@ export default function Home() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [consultantOpen, setConsultantOpen] = useState(false);
   const [neuroOpen, setNeuroOpen] = useState(false);
-  const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro">("standard");
+  const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro" | "tale">("standard");
   const [neuroResult, setNeuroResult] = useState<NeuroDiagnosis | null>(null);
+  const [taleResult, setTaleResult] = useState<TaleDiagnosis | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -109,8 +113,29 @@ export default function Home() {
     setError(null);
     setResult(null);
     setNeuroResult(null);
+    setTaleResult(null);
 
     try {
+      // Сказкотерапия — отдельный API эндпоинт
+      if (diagnosisMode === "tale") {
+        if (IS_DEMO) {
+          toast.info("Сказкотерапия доступна только в полной версии на Vercel.");
+          setLoading(false);
+          return;
+        }
+        const res = await fetch("/api/tale-diagnose", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || "Не удалось получить сказку.");
+        }
+        setTaleResult(data as TaleDiagnosis);
+        return;
+      }
+
       // Нейро-режим — отдельный API эндпоинт
       if (diagnosisMode === "neuro") {
         if (IS_DEMO) {
@@ -210,6 +235,7 @@ export default function Home() {
     setText("");
     setResult(null);
     setNeuroResult(null);
+    setTaleResult(null);
     setCurrentEntryId(null);
     setCurrentDoneProcessings([]);
     setError(null);
@@ -219,14 +245,15 @@ export default function Home() {
     setText(ex);
     setResult(null);
     setNeuroResult(null);
+    setTaleResult(null);
     setError(null);
   };
 
   useEffect(() => {
-    if ((result || neuroResult) && resultRef.current) {
+    if ((result || neuroResult || taleResult) && resultRef.current) {
       resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [result, neuroResult]);
+  }, [result, neuroResult, taleResult]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -248,7 +275,7 @@ export default function Home() {
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-24 safe-x">
         {/* HERO */}
-        {!result && !neuroResult && !loading && (
+        {!result && !neuroResult && !taleResult && !loading && (
           <Hero onPickExample={handleExample} />
         )}
 
@@ -265,7 +292,7 @@ export default function Home() {
         )}
 
         {/* ФОРМА ВВОДА — всегда, если нет результата */}
-        {!result && !neuroResult && (
+        {!result && !neuroResult && !taleResult && (
           <section
             id="form"
             className="mt-6 sm:mt-10 scroll-mt-4"
@@ -298,6 +325,19 @@ export default function Home() {
               >
                 <Brain className="h-3.5 w-3.5" />
                 Нейро-разбор (Ковалёв)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiagnosisMode("tale")}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs transition-all",
+                  diagnosisMode === "tale"
+                    ? "bg-background shadow-sm text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <BookText className="h-3.5 w-3.5" />
+                Сказкотерапия
               </button>
             </div>
 
@@ -500,10 +540,39 @@ export default function Home() {
               <NeuroDiagnosisCard data={neuroResult} />
             </motion.div>
           )}
+
+          {/* РЕЗУЛЬТАТ СКАЗКОТЕРАПИИ */}
+          {taleResult && !loading && (
+            <motion.div
+              ref={resultRef}
+              key="tale-result"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="mt-6 scroll-mt-4"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display text-lg sm:text-xl font-semibold flex items-center gap-2">
+                  <BookText className="h-5 w-5 text-primary" />
+                  Сказкотерапия
+                </h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReset}
+                  className="rounded-full"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  {t("result.new")}
+                </Button>
+              </div>
+              <TaleDiagnosisCard data={taleResult} />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* МЕТОДИКА — раскрывающийся блок */}
-        {!result && !neuroResult && (
+        {!result && !neuroResult && !taleResult && (
           <Accordion type="single" collapsible className="mt-12">
             <AccordionItem
               value="method"
