@@ -43,14 +43,16 @@ async function callZaiChat(
   const timeout = setTimeout(() => controller.abort(), 45000); // 45 сек таймаут
 
   // Список моделей по приоритету — пробуем по очереди, пока не сработает.
-  // Z.ai периодически переименовывает модели (добавляют суффикс даты).
+  // Порядок подобран по результатам тестов на бесплатном тарифе Z.ai (2026):
+  //   glm-4.5-flash — единственная доступная на бесплатном тарифе.
+  // Остальные оставлены как fallback на случай платных тарифов.
   const MODELS_TO_TRY = [
-    "glm-4-flash-250414", // актуальная flash с датой
+    "glm-4.5-flash",       // ⭐ работает на бесплатном тарифе
+    "glm-4.6-flash",       // новая 4.6 flash
+    "glm-4-flash-250414",  // flash с суффиксом даты
     "glm-4-flash",         // старый алиас
     "glm-4-air",           // более умная, но дешёвая
-    "glm-4.5-flash",       // новая 4.5 flash
-    "glm-4.6-flash",       // новая 4.6 flash
-    "glm-4-plus",          // плюс версия
+    "glm-4-plus",          // плюс версия (платная)
     "glm-4",               // базовая
   ];
 
@@ -89,12 +91,19 @@ async function callZaiChat(
           return { ok: false, status: 502, body: "Invalid JSON from Z.ai" };
         }
 
-        const content =
-          (data as { choices?: { message?: { content?: string } }[] })?.choices?.[0]?.message
-            ?.content ?? "";
+        // Z.ai GLM-4.5-flash может вернуть основной ответ в content,
+        // а рассуждения — в reasoning_content. Если content пустой,
+        // но есть reasoning_content — берём его (там тоже может быть JSON).
+        const message =
+          (data as { choices?: { message?: { content?: string; reasoning_content?: string } }[] })
+            ?.choices?.[0]?.message ?? {};
+        const content = message.content || message.reasoning_content || "";
 
         if (content) {
-          console.log(`[diagnose] success with model: ${model}, content length: ${content.length}`);
+          console.log(
+            `[diagnose] success with model: ${model}, content length: ${content.length}, ` +
+              `source: ${message.content ? "content" : "reasoning_content"}`
+          );
           return { ok: true, content };
         }
 
