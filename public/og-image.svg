@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#fdf6f0"/>
+      <stop offset="100%" stop-color="#f0e0d0"/>
+    </radialGradient>
+    <radialGradient id="g-strong" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#dc2626"/>
+      <stop offset="100%" stop-color="#fca5a5"/>
+    </radialGradient>
+    <radialGradient id="g-pleasure" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#86efac"/>
+    </radialGradient>
+    <radialGradient id="g-controller" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#93c5fd"/>
+    </radialGradient>
+    <radialGradient id="g-intermediate" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#ca8a04"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </radialGradient>
+    <radialGradient id="g-regulator" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#0891b2"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative runes top corners -->
+  <text x="60" y="80" font-size="40" fill="#ca8a04" opacity="0.3">✦ ❋ ✦</text>
+  <text x="1060" y="80" font-size="40" fill="#ca8a04" opacity="0.3">✦ ❋ ✦</text>
+
+  <!-- Title -->
+  <text x="600" y="180" text-anchor="middle" font-family="Georgia, serif" font-size="72" font-weight="700" fill="#3a2010">Мастер Кит</text>
+  <text x="600" y="240" text-anchor="middle" font-family="Georgia, serif" font-size="32" fill="#7a5a40" font-style="italic">ИИ-диагностика по методу Дарьи Трутневой</text>
+
+  <!-- Central mandala -->
+  <g transform="translate(600, 430)">
+    <!-- 5 segments at 200px radius -->
+    <path d="M 0 0 L 0 -140 A 140 140 0 0 1 133.2 -43.2 Z" fill="url(#g-pleasure)" opacity="0.85"/>
+    <path d="M 0 0 L 133.2 -43.2 A 140 140 0 0 1 121.2 70 Z" fill="url(#g-strong)" opacity="0.85"/>
+    <path d="M 0 0 L 121.2 70 A 140 140 0 0 1 0 140 Z" fill="url(#g-controller)" opacity="0.85"/>
+    <path d="M 0 0 L 0 140 A 140 140 0 0 1 -121.2 70 Z" fill="url(#g-intermediate)" opacity="0.85"/>
+    <path d="M 0 0 L -121.2 70 A 140 140 0 0 1 -133.2 -43.2 Z" fill="url(#g-regulator)" opacity="0.85"/>
+    <path d="M 0 0 L -133.2 -43.2 A 140 140 0 0 1 0 -140 Z" fill="url(#g-regulator)" opacity="0.85"/>
+
+    <!-- Gold ring -->
+    <circle r="55" fill="none" stroke="#ca8a04" stroke-width="2" opacity="0.6"/>
+
+    <!-- Center "Я" -->
+    <circle r="48" fill="#1a1a1a"/>
+    <text y="0" text-anchor="middle" dominant-baseline="central" font-family="Georgia, serif" font-size="56" font-weight="700" fill="white">Я</text>
+
+    <!-- Outer decorative ring -->
+    <circle r="160" fill="none" stroke="#ca8a04" stroke-width="1" opacity="0.3" stroke-dasharray="3 5"/>
+  </g>
+
+  <!-- Bottom text -->
+  <text x="600" y="610" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="#7a5a40">7 уровней · 9 бытийностей · 10 типов проработок</text>
+</svg>

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#fdf6f0"/>
+      <stop offset="100%" stop-color="#f5e6d8"/>
+    </radialGradient>
+    <radialGradient id="g-strong" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#dc2626"/>
+      <stop offset="100%" stop-color="#fca5a5"/>
+    </radialGradient>
+    <radialGradient id="g-pleasure" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#86efac"/>
+    </radialGradient>
+    <radialGradient id="g-controller" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#93c5fd"/>
+    </radialGradient>
+    <radialGradient id="g-intermediate" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#ca8a04"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </radialGradient>
+    <radialGradient id="g-regulator" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#0891b2"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="180" height="180" rx="40" fill="url(#bg)"/>
+
+  <!-- 5 segments -->
+  <path d="M 90 90 L 90 22 A 68 68 0 0 1 155.6 60.8 Z" fill="url(#g-pleasure)" opacity="0.9"/>
+  <path d="M 90 90 L 155.6 60.8 A 68 68 0 0 1 150.8 131.6 Z" fill="url(#g-strong)" opacity="0.9"/>
+  <path d="M 90 90 L 150.8 131.6 A 68 68 0 0 1 90 158 Z" fill="url(#g-controller)" opacity="0.9"/>
+  <path d="M 90 90 L 90 158 A 68 68 0 0 1 29.2 131.6 Z" fill="url(#g-intermediate)" opacity="0.9"/>
+  <path d="M 90 90 L 29.2 131.6 A 68 68 0 0 1 53.4 34 Z" fill="url(#g-regulator)" opacity="0.9"/>
+  <path d="M 90 90 L 53.4 34 A 68 68 0 0 1 90 22 Z" fill="url(#g-regulator)" opacity="0.9"/>
+
+  <!-- Золотая рамка вокруг центра -->
+  <circle cx="90" cy="90" r="26" fill="none" stroke="#ca8a04" stroke-width="2" opacity="0.6"/>
+
+  <!-- Центральное «Я» -->
+  <circle cx="90" cy="90" r="22" fill="#1a1a1a"/>
+  <text x="90" y="90" text-anchor="middle" dominant-baseline="central" font-family="serif" font-size="26" font-weight="700" fill="white">Я</text>
+
+  <!-- Внешний декоративный круг с рунами -->
+  <circle cx="90" cy="90" r="82" fill="none" stroke="#ca8a04" stroke-width="1" opacity="0.35" stroke-dasharray="2 4"/>
+</svg>

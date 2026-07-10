@@ -33,13 +33,34 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Мастер Кит" }],
   icons: {
-    icon: "/logo.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: ["/favicon.svg"],
   },
   openGraph: {
     title: "Мастер Кит · ИИ-диагностика",
     description:
       "Опишите ситуацию — получите диагноз уровня, эмоции и список проработок по методике Дарьи Трутневой.",
     type: "website",
+    images: [
+      {
+        url: "/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "Мастер Кит — ИИ-диагностика по методике Дарьи Трутневой",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Мастер Кит · ИИ-диагностика",
+    description:
+      "Опишите ситуацию — получите диагноз уровня, эмоции и список проработок по методике Дарьи Трутневой.",
+    images: ["/og-image.svg"],
   },
 };
 
