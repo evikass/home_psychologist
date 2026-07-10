@@ -40,7 +40,7 @@ import {
   type HistoryEntry,
 } from "@/hooks/use-diagnosis-history";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
-import { METHODOLOGY_SUMMARY, LEVELS, EMOTIONS, CONCEPTS } from "@/lib/masterkit-data";
+import { METHODOLOGY_SUMMARY, LEVELS, EMOTIONS, CONCEPTS, METHODS } from "@/lib/masterkit-data";
 import { getDemoDiagnosis } from "@/lib/demo-diagnoses";
 import { toast } from "sonner";
 
@@ -477,7 +477,7 @@ export default function Home() {
                 {/* Ключевые концепции самотерапии */}
                 <div className="mt-5 pt-4 border-t">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
-                    Ключевые концепции методики
+                    Ключевые концепции
                   </div>
                   <div className="grid sm:grid-cols-2 gap-2">
                     {CONCEPTS.map((c) => (
@@ -498,6 +498,47 @@ export default function Home() {
                           <p className="text-foreground/80">{c.fullDescription}</p>
                           <p className="text-primary/90 italic font-medium">
                             ✦ {c.keyInsight}
+                          </p>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Методы, объединённые в приложении */}
+                <div className="mt-5 pt-4 border-t">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
+                    Методы, объединённые в приложении
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {METHODS.map((m) => (
+                      <details
+                        key={m.id}
+                        className="group rounded-lg border bg-card p-2.5"
+                      >
+                        <summary className="cursor-pointer list-none">
+                          <div className="flex items-center gap-2">
+                            <ChevronRight className="h-3 w-3 text-muted-foreground group-open:rotate-90 transition-transform shrink-0" />
+                            <span className="font-medium text-xs">{m.shortName}</span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 ml-5 leading-snug">
+                            {m.name}
+                          </p>
+                        </summary>
+                        <div className="mt-2 ml-5 space-y-1.5 text-[11px] leading-relaxed">
+                          <p className="text-foreground/80">{m.description}</p>
+                          <div className="text-[10px] text-muted-foreground font-semibold mt-1.5 mb-0.5">
+                            Принципы:
+                          </div>
+                          <ul className="space-y-0.5">
+                            {m.keyPrinciples.map((p, i) => (
+                              <li key={i} className="text-foreground/70">
+                                · {p}
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="text-primary/90 italic font-medium mt-1.5">
+                            ✦ {m.whatGives}
                           </p>
                         </div>
                       </details>
