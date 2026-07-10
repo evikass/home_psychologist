@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 import {
   SYSTEM_PROMPT,
   VALID_EMOTION_IDS,
   VALID_PIT_IDS,
   VALID_PROCESSING_TYPES,
+  VALID_BEINGNESS_IDS,
   type DiagnoseResponse,
 } from "@/lib/masterkit-prompt";
 
@@ -12,32 +15,78 @@ export const maxDuration = 60;
 
 /**
  * Создаёт клиент Z.ai.
- * Поддерживаемые имена env-переменных (пробуем несколько для надёжности):
- *   - ZAI_API_KEY (рекомендуемое)
- *   - Z_AI_API_KEY
- *   - ZAI_KEY
+ * Поддерживаемые источники (по приоритету):
+ *   1. Env-переменные ZAI_API_KEY / Z_AI_API_KEY / ZAI_KEY (Vercel, продакшн)
+ *   2. Файл /etc/.z-ai-config (песочница, локальная разработка)
+ *   3. Файл .z-ai-config в корне проекта (альтернативная локальная разработка)
+ *
+ * Возвращает apiKey, baseUrl и опционально token + chatId + userId
+ * (для песочницы, где нужен JWT-токен).
  */
-function getZaiConfig() {
-  const apiKey =
+type ZaiConfig = {
+  apiKey: string;
+  baseUrl: string;
+  token?: string;
+  chatId?: string;
+  userId?: string;
+};
+
+function getZaiConfig(): ZaiConfig {
+  // 1. Env-переменные
+  const envKey =
     process.env.ZAI_API_KEY ||
     process.env.Z_AI_API_KEY ||
     process.env.ZAI_KEY;
 
-  const baseUrl =
+  const envUrl =
     process.env.ZAI_BASE_URL ||
     process.env.Z_AI_BASE_URL ||
     "https://api.z.ai/api/paas/v4";
 
-  return { apiKey, baseUrl };
+  if (envKey) {
+    return { apiKey: envKey, baseUrl: envUrl };
+  }
+
+  // 2-3. Читаем файлы конфигурации (песочница, локальная разработка)
+  try {
+    const configPaths = [
+      "/etc/.z-ai-config",
+      path.join(process.cwd(), ".z-ai-config"),
+    ];
+
+    for (const filePath of configPaths) {
+      try {
+        if (fs.existsSync(filePath)) {
+          const configStr = fs.readFileSync(filePath, "utf-8");
+          const config = JSON.parse(configStr);
+          if (config.baseUrl && config.apiKey) {
+            return {
+              apiKey: config.apiKey,
+              baseUrl: config.baseUrl,
+              token: config.token,
+              chatId: config.chatId,
+              userId: config.userId,
+            };
+          }
+        }
+      } catch {
+        // продолжаем
+      }
+    }
+  } catch {
+    console.warn("[diagnose] fs/path not available, env vars only");
+  }
+
+  return { apiKey: "", baseUrl: envUrl };
 }
 
 /** Прямой вызов Z.ai API с таймаутом и подробным логированием */
 async function callZaiChat(
-  apiKey: string,
-  baseUrl: string,
+  config: ZaiConfig,
   systemPrompt: string,
   userText: string
 ): Promise<{ ok: true; content: string } | { ok: false; status: number; body: string }> {
+  const { apiKey, baseUrl, token, chatId, userId } = config;
   const url = `${baseUrl}/chat/completions`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 45000); // 45 сек таймаут
@@ -46,6 +95,8 @@ async function callZaiChat(
   // Порядок подобран по результатам тестов на бесплатном тарифе Z.ai (2026):
   //   glm-4.5-flash — единственная доступная на бесплатном тарифе.
   // Остальные оставлены как fallback на случай платных тарифов.
+  // Для песочницы (internal-api.z.ai) первая модель может не работать —
+  // тогда код попробует следующие.
   const MODELS_TO_TRY = [
     "glm-4.5-flash",       // ⭐ работает на бесплатном тарифе
     "glm-4.6-flash",       // новая 4.6 flash
@@ -54,7 +105,21 @@ async function callZaiChat(
     "glm-4-air",           // более умная, но дешёвая
     "glm-4-plus",          // плюс версия (платная)
     "glm-4",               // базовая
+    // Песочница может использовать другие имена:
+    "glm-4-flashx",
+    "GLM-4-Flash",
   ];
+
+  // Заголовки — общие для всех запросов
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${apiKey}`,
+    "X-Z-AI-From": "Z",  // SDK песочницы передаёт этот заголовок
+  };
+  // Песочница использует JWT-токен + идентификаторы
+  if (token) headers["X-Token"] = token;
+  if (chatId) headers["X-Chat-Id"] = chatId;
+  if (userId) headers["X-User-Id"] = userId;
 
   let lastError: { ok: false; status: number; body: string } | null = null;
 
@@ -63,10 +128,7 @@ async function callZaiChat(
       console.log(`[diagnose] trying model: ${model}`);
       const response = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
+        headers,
         body: JSON.stringify({
           model,
           messages: [
@@ -189,6 +251,22 @@ function validateDiagnosis(d: unknown): DiagnoseResponse {
     };
   }
 
+  // Бытийность (геометрия сознания) — опциональное поле.
+  // Если LLM не вернул — null, UI это обработает.
+  let beingness: DiagnoseResponse["beingness"] | null = null;
+  const bo = obj.beingness as Record<string, unknown> | undefined;
+  if (bo && typeof bo === "object" && bo.id) {
+    if (!VALID_BEINGNESS_IDS.includes(bo.id as string)) {
+      throw new Error("Невалидная бытийность: " + String(bo.id));
+    }
+    beingness = {
+      id: bo.id as string,
+      name: String(bo.name ?? ""),
+      evidence: String(bo.evidence ?? ""),
+      explanation: String(bo.explanation ?? ""),
+    };
+  }
+
   const processings = Array.isArray(obj.processings) ? obj.processings : [];
   const cleanProcessings = processings.map((p, i) => {
     const po = p as Record<string, unknown>;
@@ -223,6 +301,7 @@ function validateDiagnosis(d: unknown): DiagnoseResponse {
       };
     }),
     pit,
+    beingness,
     diagnosis_summary: String(obj.diagnosis_summary ?? ""),
     processings: cleanProcessings,
     next_step: String(obj.next_step ?? ""),
@@ -247,9 +326,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { apiKey, baseUrl } = getZaiConfig();
+    const config = getZaiConfig();
 
-    if (!apiKey) {
+    if (!config.apiKey) {
       return NextResponse.json(
         {
           error:
@@ -265,10 +344,10 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(
-      `[diagnose] start: text_length=${text.length}, key_length=${apiKey.length}, url=${baseUrl}`
+      `[diagnose] start: text_length=${text.length}, key_length=${config.apiKey.length}, url=${config.baseUrl}, has_token=${!!config.token}`
     );
 
-    const result = await callZaiChat(apiKey, baseUrl, SYSTEM_PROMPT, text);
+    const result = await callZaiChat(config, SYSTEM_PROMPT, text);
 
     if (!result.ok) {
       // Чёткое сообщение об ошибке авторизации
@@ -317,28 +396,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[diagnose] got content, length=${result.content.length}`);
 
-    let parsed: DiagnoseResponse;
-    try {
-      parsed = validateDiagnosis(extractJson(result.content));
-    } catch (e) {
-      console.error(
-        "[diagnose] parse error:",
-        (e as Error).message,
-        "\nraw:",
-        result.content.slice(0, 500)
-      );
-      return NextResponse.json(
-        {
-          error:
-            "Не удалось разобрать диагноз ИИ. Попробуйте переформулировать или повторить.",
-          raw_preview: result.content.slice(0, 400),
-        },
-        { status: 502 }
-      );
-    }
-
-    console.log("[diagnose] success");
-    return NextResponse.json(parsed);
+    return processRawResponse(result.content);
   } catch (err) {
     console.error("[diagnose] fatal:", err);
     const msg = (err as Error)?.message ?? "Unknown error";
@@ -347,4 +405,30 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/** Общая логика парсинга raw-ответа LLM в DiagnoseResponse */
+function processRawResponse(raw: string) {
+  let parsed: DiagnoseResponse;
+  try {
+    parsed = validateDiagnosis(extractJson(raw));
+  } catch (e) {
+    console.error(
+      "[diagnose] parse error:",
+      (e as Error).message,
+      "\nraw:",
+      raw.slice(0, 500)
+    );
+    return NextResponse.json(
+      {
+        error:
+          "Не удалось разобрать диагноз ИИ. Попробуйте переформулировать или повторить.",
+        raw_preview: raw.slice(0, 400),
+      },
+      { status: 502 }
+    );
+  }
+
+  console.log("[diagnose] success");
+  return NextResponse.json(parsed);
 }

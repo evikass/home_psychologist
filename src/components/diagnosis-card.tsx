@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { LevelScale } from "@/components/level-scale";
+import { ConsciousnessGeometry } from "@/components/consciousness-geometry";
 import { PROCESSING_BY_TYPE } from "@/lib/masterkit-data";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
 import { cn } from "@/lib/utils";
@@ -128,6 +129,36 @@ export function DiagnosisCard({ data }: { data: DiagnoseResponse }) {
                 </div>
               );
             })}
+          </div>
+        </Block>
+      )}
+
+      {/* 3.5. Геометрия сознания — бытийность */}
+      {data.beingness && (
+        <Block delay={0.13}>
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h3 className="font-display text-base sm:text-lg font-semibold">
+              Геометрия сознания
+            </h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            В какой бытийности вы сейчас отождествлены — подсвечено на схеме.
+          </p>
+
+          <ConsciousnessGeometry activeBeingnessId={data.beingness.id} />
+
+          {/* Цитата-доказательство из текста */}
+          <div className="mt-4 rounded-lg border-l-4 bg-secondary/40 px-4 py-2.5 text-sm">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+              Почему {data.beingness.name}
+            </div>
+            <p className="italic text-foreground/80 leading-relaxed">
+              «{data.beingness.evidence}»
+            </p>
+            <p className="mt-1.5 text-foreground/70 leading-relaxed">
+              {data.beingness.explanation}
+            </p>
           </div>
         </Block>
       )}

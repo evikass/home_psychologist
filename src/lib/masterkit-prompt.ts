@@ -6,6 +6,7 @@ import {
   EMOTIONS,
   PITS,
   PROCESSINGS,
+  BEINGNESSES,
   type ProcessingType,
 } from "./masterkit-data";
 
@@ -33,10 +34,18 @@ ${PITS.map(
     `${p.name}. Признаки: ${p.signs.join(", ")}. Как держит: ${p.trap}. Выход: ${p.wayOut}.`
 ).join("\n")}
 
+5 БЫТИЙНОСТЕЙ (геометрия сознания — определи ОДНУ ведущую, в которой человек сейчас):
+${BEINGNESSES.filter((b) => b.id !== "self")
+  .map(
+    (b) =>
+      `${b.name} (${b.id}). Стихия: ${b.element}. Описание: ${b.description} ` +
+      `Качества: ${b.qualities.join(", ")}. Маркеры в тексте: ${b.markers.join(", ")}. ` +
+      `Ловушка: ${b.trap}. Ресурс: ${b.resource}.`
+  )
+  .join("\n")}
+
 ТИПЫ ПРОРАБОТОК (используй только эти):
-${PROCESSINGS.map(
-  (p) => `- ${p.type} («${p.title}»): ${p.when}`
-).join("\n")}
+${PROCESSINGS.map((p) => `- ${p.type} («${p.title}»): ${p.when}`).join("\n")}
 
 ПРАВИЛА АНАЛИЗА
 
@@ -46,11 +55,14 @@ ${PROCESSINGS.map(
    Может быть 1–2 ведущих эмоции.
 3. Эмоциональная яма — это РЕАКТИВНАЯ позиция, в которую человек провалился.
    Если её нет — верни null. Если есть — верни ровно одну.
-4. Проработки подбираются ТОЧЕЧНО под ведущую эмоцию + яму. Обычно 2–4 практики.
+4. БЫТИЙНОСТЬ — это РОЛЬ, в которой человек сейчас отождествлён.
+   Определи ОДНУ ведущую бытийность (из 5 разрешённых id: strong, pleasure, controller, intermediate, regulator).
+   Это не «Я», а та роль, в которую человек «надет» прямо сейчас.
+5. Проработки подбираются ТОЧЕЧНО под ведущую эмоцию + яму + бытийность. Обычно 2–4 практики.
    Не дублируй один тип проработки.
-5. Тон — тёплый, без оценок, без «у тебя всё плохо». Как старший наставник.
-6. Цитируй слова человека, чтобы он узнал себя в диагнозе.
-7. Каждая проработка должна объяснять, ПОЧЕМУ именно она сейчас.
+6. Тон — тёплый, без оценок, без «у тебя всё плохо». Как старший наставник.
+7. Цитируй слова человека, чтобы он узнал себя в диагнозе.
+8. Каждая проработка должна объяснять, ПОЧЕМУ именно она сейчас.
 
 ФОРМАТ ОТВЕТА — строго валидный JSON, без markdown, без комментариев, без текста вокруг.
 Схема:
@@ -75,6 +87,12 @@ ${PROCESSINGS.map(
     "signs_matched": ["признак 1", "признак 2"],
     "explanation": "1-2 предложения: как именно человек в неё провалился"
   } | null,
+  "beingness": {
+    "id": "strong" | "pleasure" | "controller" | "intermediate" | "regulator",
+    "name": строка,
+    "evidence": "цитата из письма, по которой ты понял, что человек в этой бытийности",
+    "explanation": "1-2 предложения: почему именно эта бытийность сейчас ведущая"
+  },
   "diagnosis_summary": "2-4 предложения тёплого, ясного итога: что происходит и почему завис",
   "processings": [
     {
@@ -92,8 +110,9 @@ ${PROCESSINGS.map(
 ВАЖНО:
 - Возвращай ТОЛЬКО JSON. Никакого текста до или после.
 - Все строки на русском языке.
-- Используй только разрешённые id эмоций, ям и типов проработок.
-- steps в проработке — это практические шаги, которые человек сделает прямо сейчас.`;
+- Используй только разрешённые id эмоций, ям, бытийностей и типов проработок.
+- steps в проработке — это практические шаги, которые человек сделает прямо сейчас.
+- beingness — обязательное поле (не null).`;
 
 export type DiagnoseResponse = {
   level: {
@@ -113,6 +132,12 @@ export type DiagnoseResponse = {
     signs_matched: string[];
     explanation: string;
   } | null;
+  beingness: {
+    id: string;
+    name: string;
+    evidence: string;
+    explanation: string;
+  } | null;
   diagnosis_summary: string;
   processings: {
     type: ProcessingType;
@@ -129,3 +154,6 @@ export type DiagnoseResponse = {
 export const VALID_EMOTION_IDS = EMOTIONS.map((e) => e.id);
 export const VALID_PIT_IDS = PITS.map((p) => p.id);
 export const VALID_PROCESSING_TYPES = PROCESSINGS.map((p) => p.type);
+export const VALID_BEINGNESS_IDS = BEINGNESSES.filter((b) => b.id !== "self").map(
+  (b) => b.id
+);
