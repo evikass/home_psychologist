@@ -12,18 +12,18 @@ type Dict = Record<string, string>;
 
 const ru: Dict = {
   // Header
-  "header.title": "Мастер Кит",
-  "header.subtitle": "ИИ-диагностика по методу Дарьи Трутневой",
+  "header.title": "Домашний психолог",
+  "header.subtitle": "ИИ-диагностика и самотерапия",
   "header.history": "История",
   "header.analytics": "Аналитика",
   "header.about": "О методике",
   "header.beta": "бета",
 
   // Hero
-  "hero.badge": "Методика Дарьи Трутневой",
+  "hero.badge": "Самотерапия · ИИ-наставник",
   "hero.demo_badge": "Демо-версия",
   "hero.title": "Где вы застряли —\nи как из этого выйти",
-  "hero.subtitle": "Опишите свою ситуацию своими словами — как жалобное письмо другу. ИИ определит уровень развития, застрявшую эмоцию, эмоциональную яму и подберёт точные проработки на этот момент.",
+  "hero.subtitle": "Опишите свою ситуацию своими словами — как жалобное письмо другу. ИИ определит эмоциональное состояние, застрявшие эмоции, базовые потребности и подберёт точные практики для самотерапии.",
   "hero.demo_warning": "⚠️ Это демо-версия на GitHub Pages — использует предзаготовленные диагнозы по ключевым словам. Для живого ИИ-анализа используйте полную версию.",
   "hero.cta": "Начать диагностику",
   "hero.tag.levels": "7 уровней развития",
@@ -118,7 +118,7 @@ const ru: Dict = {
   "onboarding.ready": "Готово к старту",
 
   // Methodology
-  "methodology.title": "О методике «Мастер Кит»",
+  "methodology.title": "О методе самотерапии",
   "methodology.principles": "Принципы:",
   "methodology.levels": "7 уровней развития",
   "methodology.emotions": "7 базовых эмоций",
@@ -155,18 +155,18 @@ const ru: Dict = {
 
 const en: Dict = {
   // Header
-  "header.title": "Master Kit",
-  "header.subtitle": "AI diagnosis by Darya Trutneva's method",
+  "header.title": "Home Psychologist",
+  "header.subtitle": "AI diagnosis and self-therapy",
   "header.history": "History",
   "header.analytics": "Analytics",
   "header.about": "About",
   "header.beta": "beta",
 
   // Hero
-  "hero.badge": "Darya Trutneva's Method",
+  "hero.badge": "Self-therapy · AI guide",
   "hero.demo_badge": "Demo",
   "hero.title": "Where you're stuck —\nand how to get out",
-  "hero.subtitle": "Describe your situation in your own words — like a letter to a friend. AI will determine your development level, stuck emotion, emotional pit, and suggest precise practices for this moment.",
+  "hero.subtitle": "Describe your situation in your own words — like a letter to a friend. AI will determine your emotional state, stuck emotions, basic needs, and suggest precise practices for self-therapy.",
   "hero.demo_warning": "⚠️ This is a demo version on GitHub Pages — uses pre-prepared diagnoses by keywords. For live AI analysis, use the full version.",
   "hero.cta": "Start diagnosis",
   "hero.tag.levels": "7 development levels",
@@ -261,7 +261,7 @@ const en: Dict = {
   "onboarding.ready": "Ready to start",
 
   // Methodology
-  "methodology.title": "About the \"Master Kit\" method",
+  "methodology.title": "About the self-therapy method",
   "methodology.principles": "Principles:",
   "methodology.levels": "7 development levels",
   "methodology.emotions": "7 basic emotions",

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
   BookOpen,
+  Brain,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -248,7 +249,7 @@ function Slide3() {
           Глубокая карта сознания
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Приложение построено на полной базе методики Дарьи Трутневой.
+          Приложение построено на проверенных методах психологии и самотерапии.
         </p>
       </div>
 
@@ -417,7 +418,7 @@ function Slide5() {
   );
 }
 
-/** Слайд 6: О Дарье Трутневой — авторе методики */
+/** Слайд 6: О методе самотерапии */
 function Slide6() {
   const author = ONBOARDING_DATA.author;
   return (
@@ -425,18 +426,17 @@ function Slide6() {
       <div className="mb-5">
         <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary mb-2">
           <Sparkles className="h-3.5 w-3.5" />
-          Автор методики
+          {author.role}
         </div>
         <h2 className="font-display text-2xl sm:text-3xl font-semibold leading-tight">
           {author.name}
         </h2>
-        <div className="text-sm text-primary font-medium mt-1">{author.role}</div>
       </div>
 
-      {/* Портрет-заглушка */}
+      {/* Символ-заглушка */}
       <div className="flex justify-center mb-4">
         <div className="relative h-24 w-24 rounded-full bg-gradient-to-br from-primary/30 to-primary/5 border-2 border-primary/20 flex items-center justify-center shadow-sm">
-          <span className="font-display text-3xl font-bold text-primary">ДТ</span>
+          <Brain className="h-10 w-10 text-primary" />
           <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-background border-2 border-primary/30 flex items-center justify-center">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
           </div>

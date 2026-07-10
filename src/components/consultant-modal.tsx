@@ -242,7 +242,7 @@ function AiConsultantTab() {
       <div className="rounded-lg bg-primary/5 border border-primary/15 p-3 text-xs leading-relaxed">
         <div className="font-semibold text-primary mb-1 flex items-center gap-1.5">
           <Bot className="h-3.5 w-3.5" />
-          AI-консультант по методике «Мастер Кит»
+          AI-консультант по самотерапии
         </div>
         <p className="text-muted-foreground">
           Полноценная сессия с ИИ-наставником. Ведёт диалог, задаёт вопросы к телу,
@@ -387,7 +387,7 @@ function RequestTab() {
     const date = new Date().toLocaleString("ru-RU");
 
     const requestText = `ЗАЯВКА НА КОНСУЛЬТАЦИЮ
-Методика «Мастер Кит» Дарьи Трутневой
+Метод самотерапии «Домашний психолог»
 
 Дата заявки: ${date}
 
@@ -399,10 +399,10 @@ function RequestTab() {
 ${situation}
 
 ---
-Эта заявка сформирована в приложении «Мастер Кит» (https://home-psychologist.vercel.app).
-Приложение — независимый инструмент, не аффилирован с автором методики.
+Эта заявка сформирована в приложении «Домашний психолог» (https://home-psychologist.vercel.app).
+Приложение — независимый инструмент самотерапии.
 Для официальной работы с методикой обращайтесь к сертифицированным наставникам
-через официальные каналы Дарьи Трутневой.`;
+через удобный канал связи.`;
 
     // Скачивание файла
     const blob = new Blob([requestText], { type: "text/plain;charset=utf-8" });
@@ -531,7 +531,7 @@ function TiersTab() {
       <div className="rounded-lg border-2 border-amber-300/50 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
         <strong>ℹ️ Информационный раздел.</strong> Реальная запись и оплата
         не производятся. Для запуска платных консультаций необходимо официальное
-        партнёрство с автором методики — Дарьей Трутневой.
+        партнёрство с профильными специалистами.
       </div>
 
       <div className="space-y-3">
@@ -581,8 +581,7 @@ function TiersTab() {
       </div>
 
       <div className="text-[10px] text-muted-foreground text-center italic leading-relaxed pt-2 border-t">
-        Методика «Мастер Кит» — авторская разработка Дарьи Трутневой.
-        Данное приложение — независимый инструмент, не аффилированный с автором.
+        Данное приложение — независимый инструмент самотерапии, объединяющий открытые психологические методы.
       </div>
     </div>
   );

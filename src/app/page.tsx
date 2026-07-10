@@ -421,7 +421,7 @@ export default function Home() {
               <AccordionTrigger className="text-base font-display font-semibold hover:no-underline">
                 <span className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4 text-primary" />
-                  О методике «Мастер Кит»
+                  О методе самотерапии
                 </span>
               </AccordionTrigger>
               <AccordionContent className="text-sm text-foreground/80 leading-relaxed pt-2">
@@ -474,7 +474,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Концепции Дарьи Трутневой */}
+                {/* Ключевые концепции самотерапии */}
                 <div className="mt-5 pt-4 border-t">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
                     Ключевые концепции методики
@@ -550,9 +550,9 @@ function Header({
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
           <div className="flex flex-col leading-none min-w-0">
-            <span className="font-display font-semibold text-base">Мастер Кит</span>
+            <span className="font-display font-semibold text-base">Домашний психолог</span>
             <span className="text-[10px] text-muted-foreground truncate">
-              ИИ-диагностика по методу Дарьи Трутневой
+              ИИ-диагностика и самотерапия
             </span>
           </div>
         </div>
@@ -614,7 +614,7 @@ function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
       <div className="relative z-10">
         <Badge variant="secondary" className="mb-3 text-[11px]">
           <Sparkles className="h-3 w-3 mr-1" />
-          Методика Дарьи Трутневой
+          Метод самотерапии
         </Badge>
         {IS_DEMO && (
           <Badge
@@ -721,8 +721,8 @@ function LoadingState() {
         {phases[phase]}
       </div>
       <div className="text-xs text-muted-foreground max-w-sm">
-        ИИ читает ваши слова, сверяет их с картой 7 уровней и 7 эмоций методики
-        «Мастер Кит».
+        ИИ читает ваши слова, сверяет их с картой 7 уровней и 7 эмоций
+        метода самотерапии.
       </div>
     </motion.div>
   );
@@ -734,8 +734,8 @@ function Footer({ onConsultant }: { onConsultant: () => void }) {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 text-xs text-muted-foreground flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between safe-bottom">
         <div className="flex flex-col gap-1.5">
           <span>
-            © {new Date().getFullYear()} · Инструмент самопознания по методике
-            «Мастер Кит»
+            © {new Date().getFullYear()} · Инструмент самотерапии
+            «Домашний психолог»
           </span>
           <span>
             Не заменяет работу с психологом или наставником.
