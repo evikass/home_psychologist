@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* trigger rebuild */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -142,8 +143,9 @@
 /* safe area for mobile platforms (VK Mini App, RuStore, iOS) */
 .safe-top { padding-top: env(safe-area-inset-top); }
 
-/* === Цветовые палитры (только в светлом режиме) === */
-:root[data-palette="terracotta"] {
+/* === Цветовые палитры === */
+/* Светлый режим — полный набор переменных включая фон */
+:root:not(.dark)[data-palette="terracotta"] {
   --primary: oklch(0.55 0.14 35);
   --primary-foreground: oklch(0.985 0.01 70);
   --accent: oklch(0.92 0.04 55);
@@ -152,7 +154,7 @@
   --chart-1: oklch(0.6 0.14 35);
 }
 
-:root[data-palette="emerald"] {
+:root:not(.dark)[data-palette="emerald"] {
   --primary: oklch(0.55 0.13 160);
   --primary-foreground: oklch(0.985 0.01 160);
   --accent: oklch(0.92 0.04 160);
@@ -164,7 +166,7 @@
   --sidebar: oklch(0.97 0.01 160);
 }
 
-:root[data-palette="indigo"] {
+:root:not(.dark)[data-palette="indigo"] {
   --primary: oklch(0.5 0.18 265);
   --primary-foreground: oklch(0.985 0.01 265);
   --accent: oklch(0.92 0.04 265);
@@ -176,7 +178,7 @@
   --sidebar: oklch(0.97 0.01 265);
 }
 
-:root[data-palette="rose"] {
+:root:not(.dark)[data-palette="rose"] {
   --primary: oklch(0.55 0.22 15);
   --primary-foreground: oklch(0.985 0.01 15);
   --accent: oklch(0.92 0.04 15);
@@ -186,6 +188,149 @@
   --background: oklch(0.985 0.008 15);
   --card: oklch(1 0.005 15);
   --sidebar: oklch(0.97 0.01 15);
+}
+
+/* === Тёмный режим с палитрами === */
+/* Базовый тёмный — акцентный цвет палитры, но фон остаётся тёмным */
+.dark[data-palette="terracotta"] {
+  --primary: oklch(0.72 0.14 45);
+  --primary-foreground: oklch(0.18 0.03 30);
+  --accent: oklch(0.32 0.06 35);
+  --accent-foreground: oklch(0.95 0.015 70);
+  --ring: oklch(0.72 0.14 45);
+  --chart-1: oklch(0.7 0.15 35);
+}
+
+.dark[data-palette="emerald"] {
+  --primary: oklch(0.7 0.13 160);
+  --primary-foreground: oklch(0.15 0.03 160);
+  --accent: oklch(0.3 0.05 160);
+  --accent-foreground: oklch(0.95 0.015 160);
+  --ring: oklch(0.7 0.13 160);
+  --chart-1: oklch(0.7 0.14 160);
+}
+
+/* Индиго в тёмном — волшебный космический стиль */
+.dark[data-palette="indigo"] {
+  --primary: oklch(0.7 0.18 270);
+  --primary-foreground: oklch(0.12 0.03 270);
+  --secondary: oklch(0.25 0.04 270);
+  --secondary-foreground: oklch(0.92 0.02 270);
+  --accent: oklch(0.35 0.06 270);
+  --accent-foreground: oklch(0.92 0.02 270);
+  --muted: oklch(0.22 0.03 270);
+  --muted-foreground: oklch(0.72 0.02 265);
+  --ring: oklch(0.7 0.18 270);
+  --chart-1: oklch(0.7 0.18 270);
+  /* Космический тёмный фон с фиолетовым оттенком */
+  --background: oklch(0.12 0.025 275);
+  --foreground: oklch(0.95 0.015 270);
+  --card: oklch(0.16 0.03 275);
+  --card-foreground: oklch(0.95 0.015 270);
+  --popover: oklch(0.16 0.03 275);
+  --popover-foreground: oklch(0.95 0.015 270);
+  --border: oklch(0.3 0.04 270);
+  --input: oklch(0.22 0.03 270);
+  --sidebar: oklch(0.14 0.03 275);
+  --sidebar-foreground: oklch(0.95 0.015 270);
+  --sidebar-primary: oklch(0.7 0.18 270);
+  --sidebar-accent: oklch(0.28 0.04 270);
+}
+
+.dark[data-palette="rose"] {
+  --primary: oklch(0.7 0.2 15);
+  --primary-foreground: oklch(0.13 0.03 15);
+  --accent: oklch(0.32 0.06 15);
+  --accent-foreground: oklch(0.95 0.015 15);
+  --ring: oklch(0.7 0.2 15);
+  --chart-1: oklch(0.72 0.2 15);
+}
+
+/* === Звёздное небо в тёмном режиме === */
+/* Применяется ко всему body в тёмной теме */
+.dark body {
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1.5px 1.5px at 80% 20%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1px 1px at 90% 50%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.5px 1.5px at 15% 60%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 70% 90%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1px 1px at 35% 15%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 85% 75%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1.5px 1.5px at 50% 40%, rgba(255,255,255,0.35), transparent),
+    radial-gradient(1px 1px at 5% 85%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 95% 10%, rgba(255,255,255,0.5), transparent);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-attachment: fixed;
+}
+
+/* Для индиго — усиленное космическое небо с фиолетовыми туманностями */
+.dark[data-palette="indigo"] body {
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(220,210,255,0.8), transparent),
+    radial-gradient(1.5px 1.5px at 60% 70%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(2px 2px at 80% 20%, rgba(200,190,255,0.7), transparent),
+    radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 90% 50%, rgba(220,210,255,0.6), transparent),
+    radial-gradient(1.5px 1.5px at 15% 60%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 70% 90%, rgba(200,190,255,0.4), transparent),
+    radial-gradient(1px 1px at 35% 15%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(2px 2px at 85% 75%, rgba(220,210,255,0.5), transparent),
+    radial-gradient(1.5px 1.5px at 50% 40%, rgba(255,255,255,0.45), transparent),
+    radial-gradient(1px 1px at 5% 85%, rgba(200,190,255,0.5), transparent),
+    radial-gradient(1.5px 1.5px at 95% 10%, rgba(255,255,255,0.7), transparent),
+    /* Фиолетовые туманности */
+    radial-gradient(ellipse 200px 150px at 25% 25%, oklch(0.3 0.08 280 / 0.3), transparent),
+    radial-gradient(ellipse 250px 200px at 75% 75%, oklch(0.28 0.1 290 / 0.25), transparent),
+    radial-gradient(ellipse 180px 120px at 90% 30%, oklch(0.32 0.06 260 / 0.2), transparent);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-attachment: fixed;
+}
+
+/* Мерцающие звёзды — анимация для индиго-тёмного */
+.dark[data-palette="indigo"] body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 30% 50%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 55% 25%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 75% 65%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 90% 80%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 45% 90%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 65% 10%, rgba(255,255,255,0.8), transparent);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  animation: twinkle 4s ease-in-out infinite alternate;
+  z-index: 0;
+}
+
+@keyframes twinkle {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.9; }
+  100% { opacity: 0.4; }
+}
+
+/* Hero в индиго-тёмном — космическая магия */
+.dark[data-palette="indigo"] .hero-gradient {
+  background:
+    radial-gradient(60% 80% at 80% 0%, oklch(0.35 0.12 280 / 0.6), transparent 70%),
+    radial-gradient(50% 70% at 0% 100%, oklch(0.3 0.1 290 / 0.5), transparent 65%),
+    radial-gradient(40% 60% at 50% 50%, oklch(0.25 0.06 270 / 0.3), transparent 60%),
+    linear-gradient(180deg, oklch(0.13 0.03 275), oklch(0.16 0.04 280));
+  border-color: oklch(0.4 0.08 275) !important;
+}
+
+/* Карточки в индиго-тёмном — лёгкое свечение */
+.dark[data-palette="indigo"] .bg-card {
+  box-shadow: 0 0 20px oklch(0.3 0.06 275 / 0.15);
 }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 .safe-x {

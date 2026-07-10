@@ -149,7 +149,7 @@ export function ThemeToggle() {
               ))}
               {isDark && (
                 <p className="text-[10px] text-muted-foreground px-2 pt-1.5 pb-0.5 italic">
-                  Палитры активны в светлой теме
+                  В тёмной теме индиго — звёздное небо ✨
                 </p>
               )}
             </motion.div>
