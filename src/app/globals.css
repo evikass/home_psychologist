@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-/* trigger rebuild v2 */
+/* trigger rebuild v3 */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -131,22 +131,37 @@
     @apply border-border outline-ring/50;
   }
   html {
-    font-size: 17px; /* было 16px — увеличено для читаемости */
+    font-size: 18px;
   }
+  /* Мобильные — ещё больше для читаемости */
   @media (max-width: 640px) {
     html {
-      font-size: 16px; /* на мобильных чуть меньше, но всё равно комфортно */
+      font-size: 20px;
+    }
+  }
+  /* Очень маленькие экраны */
+  @media (max-width: 380px) {
+    html {
+      font-size: 18px;
     }
   }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "ss01", "cv01";
     font-size: 1rem;
-    line-height: 1.6;
+    line-height: 1.65;
   }
   h1, h2, h3, .font-display {
     font-family: var(--font-serif);
     letter-spacing: -0.01em;
+  }
+  /* Гарантируем минимальные размеры для текстовых классов на мобильных */
+  @media (max-width: 640px) {
+    .text-xs { font-size: 0.8rem !important; }    /* 16px при базе 20px */
+    .text-sm { font-size: 0.9rem !important; }    /* 18px */
+    .text-base { font-size: 1rem !important; }    /* 20px */
+    .text-lg { font-size: 1.15rem !important; }   /* 23px */
+    .text-xl { font-size: 1.3rem !important; }    /* 26px */
   }
 }
 

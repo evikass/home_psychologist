@@ -10,6 +10,7 @@ import {
   ChevronRight,
   HelpCircle,
   History,
+  Image as ImageIcon,
   Loader2,
   RotateCcw,
   Send,
@@ -42,6 +43,8 @@ import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
 import type { NeuroDiagnosis } from "@/app/api/neuro-diagnose/route";
 import { TaleDiagnosisCard } from "@/components/tale-diagnosis-card";
 import type { TaleDiagnosis } from "@/app/api/tale-diagnose/route";
+import { CardDiagnosisCard } from "@/components/card-diagnosis-card";
+import type { CardDiagnosis } from "@/app/api/card-diagnose/route";
 import {
   useDiagnosisHistory,
   type HistoryEntry,
@@ -89,9 +92,10 @@ export default function Home() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [consultantOpen, setConsultantOpen] = useState(false);
   const [neuroOpen, setNeuroOpen] = useState(false);
-  const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro" | "tale">("standard");
+  const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro" | "tale" | "card">("standard");
   const [neuroResult, setNeuroResult] = useState<NeuroDiagnosis | null>(null);
   const [taleResult, setTaleResult] = useState<TaleDiagnosis | null>(null);
+  const [cardResult, setCardResult] = useState<CardDiagnosis | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -114,8 +118,27 @@ export default function Home() {
     setResult(null);
     setNeuroResult(null);
     setTaleResult(null);
+    setCardResult(null);
 
     try {
+      // Метафорические карты — отдельный API
+      if (diagnosisMode === "card") {
+        if (IS_DEMO) {
+          toast.info("Метафорические карты доступны только в полной версии на Vercel.");
+          setLoading(false);
+          return;
+        }
+        const res = await fetch("/api/card-diagnose", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "Не удалось подобрать карту.");
+        setCardResult(data as CardDiagnosis);
+        return;
+      }
+
       // Сказкотерапия — отдельный API эндпоинт
       if (diagnosisMode === "tale") {
         if (IS_DEMO) {
@@ -236,6 +259,7 @@ export default function Home() {
     setResult(null);
     setNeuroResult(null);
     setTaleResult(null);
+    setCardResult(null);
     setCurrentEntryId(null);
     setCurrentDoneProcessings([]);
     setError(null);
@@ -246,11 +270,12 @@ export default function Home() {
     setResult(null);
     setNeuroResult(null);
     setTaleResult(null);
+    setCardResult(null);
     setError(null);
   };
 
   useEffect(() => {
-    if ((result || neuroResult || taleResult) && resultRef.current) {
+    if ((result || neuroResult || taleResult || cardResult) && resultRef.current) {
       resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [result, neuroResult, taleResult]);
@@ -275,7 +300,7 @@ export default function Home() {
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-24 safe-x">
         {/* HERO */}
-        {!result && !neuroResult && !taleResult && !loading && (
+        {!result && !neuroResult && !taleResult && !cardResult && !loading && (
           <Hero onPickExample={handleExample} />
         )}
 
@@ -292,7 +317,7 @@ export default function Home() {
         )}
 
         {/* ФОРМА ВВОДА — всегда, если нет результата */}
-        {!result && !neuroResult && !taleResult && (
+        {!result && !neuroResult && !taleResult && !cardResult && (
           <section
             id="form"
             className="mt-6 sm:mt-10 scroll-mt-4"
@@ -338,6 +363,19 @@ export default function Home() {
               >
                 <BookText className="h-3.5 w-3.5" />
                 Сказкотерапия
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiagnosisMode("card")}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs transition-all",
+                  diagnosisMode === "card"
+                    ? "bg-background shadow-sm text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <ImageIcon className="h-3.5 w-3.5" />
+                Метафорические карты
               </button>
             </div>
 
@@ -569,10 +607,34 @@ export default function Home() {
               <TaleDiagnosisCard data={taleResult} />
             </motion.div>
           )}
+
+          {/* РЕЗУЛЬТАТ МЕТАФОРИЧЕСКИХ КАРТ */}
+          {cardResult && !loading && (
+            <motion.div
+              ref={resultRef}
+              key="card-result"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="mt-6 scroll-mt-4"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display text-lg sm:text-xl font-semibold flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5 text-primary" />
+                  Метафорическая карта
+                </h2>
+                <Button variant="outline" size="sm" onClick={handleReset} className="rounded-full">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  {t("result.new")}
+                </Button>
+              </div>
+              <CardDiagnosisCard data={cardResult} />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* МЕТОДИКА — раскрывающийся блок */}
-        {!result && !neuroResult && !taleResult && (
+        {!result && !neuroResult && !taleResult && !cardResult && (
           <Accordion type="single" collapsible className="mt-12">
             <AccordionItem
               value="method"
