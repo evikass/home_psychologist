@@ -2,16 +2,19 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Mic, MicOff, Square } from "lucide-react";
+import { Loader2, Mic, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 /**
  * Компонент голосового ввода.
- * Записывает аудио через MediaRecorder API, отправляет на /api/transcribe,
- * получает текст и вставляет в textarea.
  *
- * Поддерживается только в браузерах с MediaRecorder (Chrome, Firefox, Safari 14.1+).
+ * Два режима работы:
+ * 1. Web Speech API (SpeechRecognition) — работает в iOS Safari, Chrome на мобильных.
+ *    Не требует отправки на сервер, распознаёт напрямую в браузере.
+ * 2. MediaRecorder + /api/transcribe — fallback для браузеров без SpeechRecognition.
+ *
+ * Если ни один не доступен — кнопка не показывается.
  */
 export function VoiceInput({
   onTranscribe,
@@ -23,99 +26,230 @@ export function VoiceInput({
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [supported, setSupported] = useState(false);
+  const [mode, setMode] = useState<"speech" | "recorder" | null>(null);
   const [seconds, setSeconds] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const finalTextRef = useRef<string>("");
 
   useEffect(() => {
-    setSupported(
+    // Проверяем поддержку Web Speech API
+    const SpeechRecognition =
+      (typeof window !== "undefined" && (window as any).SpeechRecognition) ||
+      (typeof window !== "undefined" && (window as any).webkitSpeechRecognition);
+
+    if (SpeechRecognition) {
+      setSupported(true);
+      setMode("speech");
+      return;
+    }
+
+    // Fallback: проверяем MediaRecorder
+    if (
       typeof window !== "undefined" &&
-        "MediaRecorder" in window &&
-        navigator.mediaDevices?.getUserMedia
-    );
+      "MediaRecorder" in window &&
+      navigator.mediaDevices?.getUserMedia
+    ) {
+      setSupported(true);
+      setMode("recorder");
+    }
   }, []);
 
   const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
+    finalTextRef.current = "";
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported("audio/webm")
-          ? "audio/webm"
-          : "audio/mp4",
-      });
-      chunksRef.current = [];
+    // === Режим 1: Web Speech API ===
+    if (mode === "speech") {
+      try {
+        const SpeechRecognition =
+          (window as any).SpeechRecognition ||
+          (window as any).webkitSpeechRecognition;
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
+        const recognition = new SpeechRecognition();
+        recognition.lang = "ru-RU";
+        recognition.continuous = true;
+        recognition.interimResults = true;
 
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, {
-          type: mediaRecorder.mimeType || "audio/webm",
-        });
-        // Останавливаем все треки
-        streamRef.current?.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
+        recognition.onresult = (event: any) => {
+          let interim = "";
+          let final = finalTextRef.current;
 
-        if (blob.size < 1000) {
-          toast.error("Запись слишком короткая. Попробуйте ещё раз.");
-          return;
-        }
-
-        // Конвертируем в base64
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64 = (reader.result as string).split(",")[1];
-          setTranscribing(true);
-          try {
-            const res = await fetch("/api/transcribe", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ audio: base64 }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-              throw new Error(data?.error || "Не удалось распознать речь.");
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              final += transcript;
+              finalTextRef.current = final;
+            } else {
+              interim += transcript;
             }
-            onTranscribe(data.text);
-            toast.success("Распознано: " + data.text.slice(0, 60) + (data.text.length > 60 ? "…" : ""));
-          } catch (e) {
-            const msg = (e as Error).message || "Ошибка распознавания.";
-            toast.error(msg);
-          } finally {
-            setTranscribing(false);
           }
         };
-        reader.readAsDataURL(blob);
-      };
 
-      mediaRecorder.start();
-      mediaRecorderRef.current = mediaRecorder;
-      setRecording(true);
-      setSeconds(0);
+        recognition.onerror = (event: any) => {
+          console.error("[voice] speech error:", event.error);
+          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            toast.error("Нет доступа к микрофону. Разрешите доступ в настройках браузера.");
+          } else if (event.error === "no-speech") {
+            toast.error("Не услышал речь. Попробуйте говорить громче.");
+          } else {
+            toast.error("Ошибка распознавания: " + event.error);
+          }
+          setRecording(false);
+          if (timerRef.current) clearInterval(timerRef.current);
+        };
 
-      // Таймер
-      timerRef.current = setInterval(() => {
-        setSeconds((s) => s + 1);
-      }, 1000);
+        recognition.onend = () => {
+          const text = finalTextRef.current.trim();
+          if (text) {
+            onTranscribe(text);
+            toast.success("Распознано: " + text.slice(0, 60) + (text.length > 60 ? "…" : ""));
+          } else {
+            toast.error("Не удалось распознать речь. Попробуйте ещё раз.");
+          }
+          setRecording(false);
+          if (timerRef.current) clearInterval(timerRef.current);
+        };
 
-      // Авто-стоп через 60 секунд
-      setTimeout(() => {
-        if (mediaRecorderRef.current?.state === "recording") {
-          stopRecording();
-        }
-      }, 60000);
-    } catch (e) {
-      const msg = (e as Error).message || "Нет доступа к микрофону.";
-      toast.error("Микрофон недоступен: " + msg);
+        recognition.start();
+        recognitionRef.current = recognition;
+        setRecording(true);
+        setSeconds(0);
+
+        timerRef.current = setInterval(() => {
+          setSeconds((s) => s + 1);
+        }, 1000);
+
+        // Авто-стоп через 60 секунд
+        setTimeout(() => {
+          if (recognitionRef.current) {
+            try {
+              recognitionRef.current.stop();
+            } catch {}
+          }
+        }, 60000);
+      } catch (e) {
+        const msg = (e as Error).message || "Ошибка.";
+        toast.error("Голосовой ввод недоступен: " + msg);
+      }
+      return;
     }
-  }, [onTranscribe]);
+
+    // === Режим 2: MediaRecorder + сервер ===
+    if (mode === "recorder") {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+
+        // Подбираем поддерживаемый mimeType
+        let mimeType = "audio/webm";
+        if (typeof MediaRecorder.isTypeSupported === "function") {
+          if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+            mimeType = "audio/webm;codecs=opus";
+          } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+            mimeType = "audio/webm";
+          } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+            mimeType = "audio/mp4";
+          } else if (MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) {
+            mimeType = "audio/ogg;codecs=opus";
+          }
+        }
+
+        const mediaRecorder = new MediaRecorder(stream, { mimeType });
+        chunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunksRef.current, {
+            type: mediaRecorder.mimeType || mimeType,
+          });
+          streamRef.current?.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+
+          if (blob.size < 500) {
+            toast.error("Запись слишком короткая. Попробуйте ещё раз.");
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const base64 = (reader.result as string).split(",")[1];
+            setTranscribing(true);
+            try {
+              const res = await fetch("/api/transcribe", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ audio: base64 }),
+              });
+              const data = await res.json();
+              if (!res.ok) {
+                throw new Error(data?.error || "Не удалось распознать речь.");
+              }
+              onTranscribe(data.text);
+              toast.success(
+                "Распознано: " + data.text.slice(0, 60) + (data.text.length > 60 ? "…" : "")
+              );
+            } catch (e) {
+              const msg = (e as Error).message || "Ошибка распознавания.";
+              toast.error(msg);
+            } finally {
+              setTranscribing(false);
+            }
+          };
+          reader.readAsDataURL(blob);
+        };
+
+        mediaRecorder.start();
+        mediaRecorderRef.current = mediaRecorder;
+        setRecording(true);
+        setSeconds(0);
+
+        timerRef.current = setInterval(() => {
+          setSeconds((s) => s + 1);
+        }, 1000);
+
+        setTimeout(() => {
+          if (mediaRecorderRef.current?.state === "recording") {
+            stopRecording();
+          }
+        }, 60000);
+      } catch (e) {
+        const err = e as Error;
+        let msg = "Нет доступа к микрофону.";
+        if (err.name === "NotAllowedError") {
+          msg = "Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.";
+        } else if (err.name === "NotFoundError") {
+          msg = "Микрофон не найден. Проверьте подключение.";
+        } else if (err.name === "NotReadableError") {
+          msg = "Микрофон занят другим приложением.";
+        } else {
+          msg = err.message || msg;
+        }
+        toast.error(msg);
+      }
+    }
+  }, [mode, onTranscribe]);
 
   const stopRecording = useCallback(() => {
+    // Web Speech API
+    if (mode === "speech" && recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      setRecording(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
+    // MediaRecorder
     if (mediaRecorderRef.current?.state === "recording") {
       mediaRecorderRef.current.stop();
     }
@@ -124,7 +258,7 @@ export function VoiceInput({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-  }, []);
+  }, [mode]);
 
   const handleToggle = () => {
     if (recording) {
@@ -134,11 +268,15 @@ export function VoiceInput({
     }
   };
 
-  // Очистка при размонтировании
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
     };
   }, []);
 
@@ -174,7 +312,6 @@ export function VoiceInput({
           : "Голос"}
       </Button>
 
-      {/* Индикатор записи */}
       <AnimatePresence>
         {recording && (
           <motion.div
@@ -188,9 +325,7 @@ export function VoiceInput({
               animate={{ opacity: [1, 0.3, 1] }}
               transition={{ duration: 1, repeat: Infinity }}
             />
-            <span className="text-xs text-muted-foreground">
-              Говорите…
-            </span>
+            <span className="text-xs text-muted-foreground">Говорите…</span>
           </motion.div>
         )}
       </AnimatePresence>
