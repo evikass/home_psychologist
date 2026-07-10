@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3,
   BookOpen,
+  Brain,
   ChevronRight,
   HelpCircle,
   History,
@@ -35,6 +36,7 @@ import { VoiceInput } from "@/components/voice-input";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useI18n } from "@/components/language-provider";
 import { ConsultantModal } from "@/components/consultant-modal";
+import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import {
   useDiagnosisHistory,
   type HistoryEntry,
@@ -80,6 +82,7 @@ export default function Home() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [consultantOpen, setConsultantOpen] = useState(false);
+  const [neuroOpen, setNeuroOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -204,6 +207,7 @@ export default function Home() {
         onOpenHistory={() => setHistoryOpen(true)}
         onOpenAnalytics={() => setAnalyticsOpen(true)}
         onShowOnboarding={showAgain}
+        onOpenNeuro={() => setNeuroOpen(true)}
       />
 
       <OnboardingModal open={showOnboarding} onOpenChange={setShowOnboarding} />
@@ -567,6 +571,8 @@ export default function Home() {
 
       <ConsultantModal open={consultantOpen} onOpenChange={setConsultantOpen} />
 
+      <NeurotransformingPanel open={neuroOpen} onOpenChange={setNeuroOpen} />
+
       <Footer onConsultant={() => setConsultantOpen(true)} />
     </div>
   );
@@ -577,11 +583,13 @@ function Header({
   onOpenHistory,
   onOpenAnalytics,
   onShowOnboarding,
+  onOpenNeuro,
 }: {
   historyCount: number;
   onOpenHistory: () => void;
   onOpenAnalytics: () => void;
   onShowOnboarding: () => void;
+  onOpenNeuro: () => void;
 }) {
   return (
     <header className="sticky top-0 z-30 backdrop-blur-md bg-background/80 border-b safe-top">
@@ -619,6 +627,16 @@ function Header({
             title="О методике"
           >
             <HelpCircle className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenNeuro}
+            className="h-8 gap-1.5 text-xs rounded-full"
+            title="Нейротрансформинг"
+          >
+            <Brain className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Нейро</span>
           </Button>
           <Button
             variant="outline"
