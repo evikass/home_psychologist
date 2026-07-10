@@ -3,8 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  BarChart3,
   BookOpen,
   ChevronRight,
+  HelpCircle,
   History,
   Loader2,
   RotateCcw,
@@ -23,12 +25,17 @@ import {
 } from "@/components/ui/accordion";
 import { DiagnosisCard } from "@/components/diagnosis-card";
 import { HistoryPanel } from "@/components/history-panel";
+import { AnalyticsPanel } from "@/components/analytics-panel";
+import { OnboardingModal, useOnboarding } from "@/components/onboarding-modal";
+import { RecommendationsPanel } from "@/components/recommendations-panel";
+import { LiveHints } from "@/components/live-hints";
+import { AmbientSound } from "@/components/ambient-sound";
 import {
   useDiagnosisHistory,
   type HistoryEntry,
 } from "@/hooks/use-diagnosis-history";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
-import { METHODOLOGY_SUMMARY, LEVELS, EMOTIONS } from "@/lib/masterkit-data";
+import { METHODOLOGY_SUMMARY, LEVELS, EMOTIONS, CONCEPTS } from "@/lib/masterkit-data";
 import { getDemoDiagnosis } from "@/lib/demo-diagnoses";
 import { toast } from "sonner";
 
@@ -62,11 +69,21 @@ export default function Home() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
+  const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
+  const [currentDoneProcessings, setCurrentDoneProcessings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const { history, addEntry, removeEntry, clearAll } = useDiagnosisHistory();
+  const {
+    history,
+    addEntry,
+    removeEntry,
+    clearAll,
+    toggleProcessingDone,
+  } = useDiagnosisHistory();
+  const { showOnboarding, setShowOnboarding, showAgain } = useOnboarding();
 
   const handleSubmit = async () => {
     if (text.trim().length < 20) {
@@ -84,7 +101,10 @@ export default function Home() {
         await new Promise((r) => setTimeout(r, 1200));
         const demoResult = getDemoDiagnosis(text);
         setResult(demoResult);
+        setCurrentDoneProcessings([]);
+        const newEntry = { id: `${Date.now()}-demo`, timestamp: Date.now(), text: text.slice(0, 280), result: demoResult };
         addEntry(text, demoResult);
+        setCurrentEntryId(newEntry.id);
         return;
       }
 
@@ -105,7 +125,10 @@ export default function Home() {
       }
       const finalResult = data as DiagnoseResponse;
       setResult(finalResult);
+      setCurrentDoneProcessings([]);
       addEntry(text, finalResult);
+      // Получаем ID только что добавленной записи (первая в истории)
+      setCurrentEntryId(`${Date.now()}-0`);
     } catch (e) {
       const msg = (e as Error).message || "Что-то пошло не так.";
       setError(msg);
@@ -118,14 +141,40 @@ export default function Home() {
   const handleSelectHistory = (entry: HistoryEntry) => {
     setText(entry.text);
     setResult(entry.result);
+    setCurrentEntryId(entry.id);
+    setCurrentDoneProcessings(entry.doneProcessings ?? []);
     setError(null);
     setHistoryOpen(false);
     toast.success("Загружен диагноз из истории");
   };
 
+  const handleToggleDone = (processingIndex: number) => {
+    if (!currentEntryId) {
+      // Локальный режим — не сохраняется
+      setCurrentDoneProcessings((prev) => {
+        const key = String(processingIndex);
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return Array.from(next);
+      });
+      return;
+    }
+    toggleProcessingDone(currentEntryId, processingIndex);
+    setCurrentDoneProcessings((prev) => {
+      const key = String(processingIndex);
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return Array.from(next);
+    });
+  };
+
   const handleReset = () => {
     setText("");
     setResult(null);
+    setCurrentEntryId(null);
+    setCurrentDoneProcessings([]);
     setError(null);
   };
 
@@ -146,12 +195,34 @@ export default function Home() {
       <Header
         historyCount={history.length}
         onOpenHistory={() => setHistoryOpen(true)}
+        onOpenAnalytics={() => setAnalyticsOpen(true)}
+        onShowOnboarding={showAgain}
+      />
+
+      <OnboardingModal open={showOnboarding} onOpenChange={setShowOnboarding} />
+
+      <AnalyticsPanel
+        open={analyticsOpen}
+        onOpenChange={setAnalyticsOpen}
+        history={history}
       />
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-24 safe-x">
         {/* HERO */}
         {!result && !loading && (
           <Hero onPickExample={handleExample} />
+        )}
+
+        {/* Персональные рекомендации */}
+        {!result && !loading && history.length > 0 && (
+          <div className="mt-6">
+            <RecommendationsPanel
+              history={history}
+              onStartDiagnosis={() =>
+                document.getElementById("form")?.scrollIntoView({ behavior: "smooth" })
+              }
+            />
+          </div>
         )}
 
         {/* ФОРМА ВВОДА — всегда, если нет результата */}
@@ -189,6 +260,11 @@ export default function Home() {
                     </button>
                   )}
                 </div>
+
+                {/* Подсказки в реальном времени — подсветка ключевых слов */}
+                {text.length > 30 && !result && !loading && (
+                  <LiveHints text={text} />
+                )}
               </div>
 
               <div className="flex items-center justify-between gap-3 p-4 sm:px-6 bg-secondary/50 border-t">
@@ -305,7 +381,12 @@ export default function Home() {
                   Новый запрос
                 </Button>
               </div>
-              <DiagnosisCard data={result} />
+              <DiagnosisCard
+                data={result}
+                entryId={currentEntryId ?? undefined}
+                doneProcessings={currentDoneProcessings}
+                onToggleDone={handleToggleDone}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -372,6 +453,38 @@ export default function Home() {
                     </ul>
                   </div>
                 </div>
+
+                {/* Концепции Дарьи Трутневой */}
+                <div className="mt-5 pt-4 border-t">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
+                    Ключевые концепции методики
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {CONCEPTS.map((c) => (
+                      <details
+                        key={c.id}
+                        className="group rounded-lg border bg-card p-2.5"
+                      >
+                        <summary className="cursor-pointer list-none">
+                          <div className="flex items-center gap-2">
+                            <ChevronRight className="h-3 w-3 text-muted-foreground group-open:rotate-90 transition-transform shrink-0" />
+                            <span className="font-medium text-xs">{c.title}</span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 ml-5 leading-snug">
+                            {c.shortDescription}
+                          </p>
+                        </summary>
+                        <div className="mt-2 ml-5 space-y-1.5 text-[11px] leading-relaxed">
+                          <p className="text-foreground/80">{c.fullDescription}</p>
+                          <p className="text-primary/90 italic font-medium">
+                            ✦ {c.keyInsight}
+                          </p>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </div>
+
                 <p className="text-xs text-muted-foreground mt-4 italic">
                   Приложение создано как инструмент самопознания и не заменяет
                   работу с психологом или сертифицированным наставником методики.
@@ -399,25 +512,49 @@ export default function Home() {
 function Header({
   historyCount,
   onOpenHistory,
+  onOpenAnalytics,
+  onShowOnboarding,
 }: {
   historyCount: number;
   onOpenHistory: () => void;
+  onOpenAnalytics: () => void;
+  onShowOnboarding: () => void;
 }) {
   return (
     <header className="sticky top-0 z-30 backdrop-blur-md bg-background/80 border-b safe-top">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="relative h-8 w-8 rounded-full bg-gradient-to-br from-primary to-amber-500/70 flex items-center justify-center shadow-sm">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="relative h-8 w-8 rounded-full bg-gradient-to-br from-primary to-amber-500/70 flex items-center justify-center shadow-sm shrink-0">
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
-          <div className="flex flex-col leading-none">
+          <div className="flex flex-col leading-none min-w-0">
             <span className="font-display font-semibold text-base">Мастер Кит</span>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground truncate">
               ИИ-диагностика по методу Дарьи Трутневой
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <AmbientSound />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onOpenAnalytics}
+            disabled={historyCount === 0}
+            className="h-8 w-8 p-0"
+            title="Аналитика"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onShowOnboarding}
+            className="h-8 w-8 p-0"
+            title="О методике"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -425,7 +562,7 @@ function Header({
             className="rounded-full h-8 gap-1.5 text-xs"
           >
             <History className="h-3.5 w-3.5" />
-            История
+            <span className="hidden sm:inline">История</span>
             {historyCount > 0 && (
               <Badge
                 variant="secondary"
@@ -435,9 +572,6 @@ function Header({
               </Badge>
             )}
           </Button>
-          <Badge variant="outline" className="hidden sm:inline-flex text-[11px]">
-            бета
-          </Badge>
         </div>
       </div>
     </header>

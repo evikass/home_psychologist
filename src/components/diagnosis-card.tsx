@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   AlertCircle,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { LevelScale } from "@/components/level-scale";
 import { ConsciousnessGeometry } from "@/components/consciousness-geometry";
@@ -42,7 +44,34 @@ const INTENSITY_LABEL: Record<string, string> = {
   высокая: "высокая",
 };
 
-export function DiagnosisCard({ data }: { data: DiagnoseResponse }) {
+export function DiagnosisCard({
+  data,
+  entryId,
+  doneProcessings = [],
+  onToggleDone,
+}: {
+  data: DiagnoseResponse;
+  entryId?: string;
+  doneProcessings?: string[];
+  onToggleDone?: (processingIndex: number) => void;
+}) {
+  const [localDone, setLocalDone] = useState<Set<string>>(
+    new Set(doneProcessings)
+  );
+
+  const handleToggle = (index: number) => {
+    const key = String(index);
+    setLocalDone((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+    onToggleDone?.(index);
+  };
+
+  const doneCount = localDone.size;
+  const totalCount = data.processings.length;
   return (
     <motion.div
       className="flex flex-col gap-4 sm:gap-5"
@@ -198,26 +227,43 @@ export function DiagnosisCard({ data }: { data: DiagnoseResponse }) {
 
       {/* 5. Проработки — главный блок */}
       <Block delay={0.2}>
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <CheckCircle2 className="h-4 w-4 text-primary" />
           <h3 className="font-display text-base sm:text-lg font-semibold">
             Проработки на сейчас
           </h3>
+          {totalCount > 0 && (
+            <Badge
+              variant={doneCount === totalCount ? "default" : "secondary"}
+              className="ml-auto text-[10px]"
+            >
+              {doneCount} / {totalCount}
+              {doneCount === totalCount && " ✓"}
+            </Badge>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mb-4">
           Сделайте по порядку. Каждая — 5–20 минут, с контактом с телом.
+          Отмечайте выполненные — прогресс сохранится.
         </p>
 
         <div className="flex flex-col gap-3">
           {data.processings.map((p, i) => {
             const meta = PROCESSING_BY_TYPE[p.type];
+            const isDone = localDone.has(String(i));
             return (
               <div
                 key={i}
-                className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm"
+                className={cn(
+                  "rounded-xl border bg-card p-4 sm:p-5 shadow-sm transition-all",
+                  isDone && "opacity-60 border-primary/30 bg-primary/5"
+                )}
               >
                 <div className="flex items-start gap-3 mb-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                  <div className={cn(
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors",
+                    isDone ? "bg-primary/30 text-primary" : "bg-primary text-primary-foreground"
+                  )}>
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -228,11 +274,31 @@ export function DiagnosisCard({ data }: { data: DiagnoseResponse }) {
                       <Badge variant="secondary" className="text-[10px] h-5">
                         {meta?.type ?? p.type}
                       </Badge>
+                      {isDone && (
+                        <Badge className="text-[10px] h-5 bg-primary/15 text-primary border-primary/30">
+                          <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
+                          сделано
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-foreground/70 mt-1 leading-relaxed">
                       {p.why_now}
                     </p>
                   </div>
+                  {/* Чекбокс «сделано» */}
+                  <label
+                    className="flex items-center gap-1.5 cursor-pointer shrink-0 mt-1 group"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={isDone}
+                      onCheckedChange={() => handleToggle(i)}
+                      id={`done-${entryId ?? "current"}-${i}`}
+                    />
+                    <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">
+                      сделал(а)
+                    </span>
+                  </label>
                 </div>
 
                 <Separator className="my-3" />

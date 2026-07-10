@@ -12,19 +12,19 @@ export type HistoryEntry = {
   timestamp: number; // epoch ms
   text: string;       // исходный текст (обрезанный)
   result: DiagnoseResponse;
+  doneProcessings?: string[]; // индексы выполненных проработок (как строки)
 };
 
 /**
  * Хук для сохранения и загрузки истории диагнозов.
  * Хранится в localStorage, до 50 записей.
+ * Также сохраняет отметки о выполненных проработках.
  */
 export function useDiagnosisHistory() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   // Загрузка из localStorage при монтировании.
-  // Используем функциональный апдейт через Promise.resolve для избежания
-  // предупреждения react-hooks/set-state-in-effect.
   useEffect(() => {
     let mounted = true;
     Promise.resolve().then(() => {
@@ -89,7 +89,36 @@ export function useDiagnosisHistory() {
     persist([]);
   }, [persist]);
 
-  return { history, loaded, addEntry, removeEntry, clearAll };
+  /** Отметить проработку как выполненную (или снять отметку) */
+  const toggleProcessingDone = useCallback(
+    (entryId: string, processingIndex: number) => {
+      setHistory((prev) => {
+        const next = prev.map((e) => {
+          if (e.id !== entryId) return e;
+          const done = new Set(e.doneProcessings ?? []);
+          const key = String(processingIndex);
+          if (done.has(key)) {
+            done.delete(key);
+          } else {
+            done.add(key);
+          }
+          return { ...e, doneProcessings: Array.from(done) };
+        });
+        persist(next);
+        return next;
+      });
+    },
+    [persist]
+  );
+
+  return {
+    history,
+    loaded,
+    addEntry,
+    removeEntry,
+    clearAll,
+    toggleProcessingDone,
+  };
 }
 
 /** Форматирование даты для отображения */
@@ -137,6 +166,8 @@ export function getHistoryStats(history: HistoryEntry[]) {
       beingnessCounts: [] as { id: string; name: string; count: number; color: string; symbol: string }[],
       levelCounts: [] as { id: number; name: string; count: number }[],
       lastDate: null as number | null,
+      doneCount: 0,
+      totalProcessings: 0,
     };
   }
 
@@ -179,10 +210,107 @@ export function getHistoryStats(history: HistoryEntry[]) {
     .map(([id, v]) => ({ id, ...v }))
     .sort((a, b) => a.id - b.id);
 
+  // Подсчёт выполненных проработок
+  let doneCount = 0;
+  let totalProcessings = 0;
+  for (const e of history) {
+    totalProcessings += e.result.processings?.length ?? 0;
+    doneCount += e.doneProcessings?.length ?? 0;
+  }
+
   return {
     total: history.length,
     beingnessCounts,
     levelCounts,
     lastDate: history[0]?.timestamp ?? null,
+    doneCount,
+    totalProcessings,
   };
+}
+
+/**
+ * Тренды по бытийностям за период.
+ * Возвращает массив точек: дата + распределение бытийностей в этот день.
+ */
+export function getBeingnessTrend(
+  history: HistoryEntry[],
+  periodDays: number = 30
+) {
+  const now = Date.now();
+  const periodMs = periodDays * 24 * 60 * 60 * 1000;
+  const cutoff = now - periodMs;
+
+  // Группируем по дням
+  const byDay = new Map<string, HistoryEntry[]>();
+  for (const e of history) {
+    if (e.timestamp < cutoff) continue;
+    const date = new Date(e.timestamp);
+    const dayKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+    const existing = byDay.get(dayKey) ?? [];
+    existing.push(e);
+    byDay.set(dayKey, existing);
+  }
+
+  // Сортируем дни по времени
+  const sortedDays = Array.from(byDay.entries()).sort((a, b) => {
+    const [y1, m1, d1] = a[0].split("-").map(Number);
+    const [y2, m2, d2] = b[0].split("-").map(Number);
+    return new Date(y1, m1 - 1, d1).getTime() - new Date(y2, m2 - 1, d2).getTime();
+  });
+
+  // Для каждого дня — сколько раз каждая бытийность
+  return sortedDays.map(([dayKey, entries]) => {
+    const [y, m, d] = dayKey.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    const counts = new Map<string, number>();
+    for (const e of entries) {
+      if (e.result.beingness?.id) {
+        counts.set(
+          e.result.beingness.id,
+          (counts.get(e.result.beingness.id) ?? 0) + 1
+        );
+      }
+    }
+    return {
+      date,
+      dateLabel: date.toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "short",
+      }),
+      counts: Object.fromEntries(counts),
+      total: entries.length,
+    };
+  });
+}
+
+/**
+ * Экспорт истории в JSON-файл.
+ */
+export function exportHistoryToJson(history: HistoryEntry[]) {
+  const data = {
+    exportedAt: new Date().toISOString(),
+    appVersion: "1.0",
+    method: "Мастер Кит · Дарья Трутнева",
+    totalEntries: history.length,
+    entries: history.map((e) => ({
+      id: e.id,
+      date: new Date(e.timestamp).toISOString(),
+      text: e.text,
+      diagnosis: e.result,
+      doneProcessings: e.doneProcessings ?? [],
+    })),
+  };
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const dateStr = new Date().toISOString().slice(0, 10);
+  a.download = `masterkit-history-${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
