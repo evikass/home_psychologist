@@ -6,8 +6,8 @@ export const maxDuration = 30;
 /**
  * Расширенный диагностический эндпоинт:
  * 1. Показывает состояние env-переменных
- * 2. Делает тестовый запрос к Z.ai с вашим ключом
- * 3. Показывает статус и тело ответа
+ * 2. Делает тестовый запрос к Z.ai с разными моделями
+ * 3. Показывает статус и тело ответа для каждой модели
  */
 export async function GET() {
   const apiKey =
@@ -36,13 +36,12 @@ export async function GET() {
         : "✗ missing",
       ZAI_BASE_URL: baseUrl,
     },
-    zai_test_call: null as null | {
-      url: string;
+    zai_models_test: [] as Array<{
+      model: string;
       status: number;
       ok: boolean;
       response_preview: string;
-      error?: string;
-    },
+    }>,
     diagnosis: "",
     next_steps: [] as string[],
   };
@@ -60,67 +59,82 @@ export async function GET() {
     return NextResponse.json(envStatus, { status: 200 });
   }
 
-  // Тестовый запрос к Z.ai
   const testUrl = `${baseUrl}/chat/completions`;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+  const MODELS_TO_TRY = [
+    "glm-4-flash-250414",
+    "glm-4-flash",
+    "glm-4-air",
+    "glm-4.5-flash",
+    "glm-4.6-flash",
+    "glm-4-plus",
+    "glm-4",
+  ];
 
-    const response = await fetch(testUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "glm-4-flash",
-        messages: [{ role: "user", content: "Скажи привет" }],
-        max_tokens: 20,
-      }),
-      signal: controller.signal,
-    });
+  let workingModel: string | null = null;
 
-    const bodyText = await response.text();
-    clearTimeout(timeout);
+  for (const model of MODELS_TO_TRY) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
 
-    envStatus.zai_test_call = {
-      url: testUrl,
-      status: response.status,
-      ok: response.ok,
-      response_preview: bodyText.slice(0, 500),
-    };
+      const response = await fetch(testUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: "Скажи привет" }],
+          max_tokens: 20,
+        }),
+        signal: controller.signal,
+      });
 
-    if (response.ok) {
-      envStatus.diagnosis =
-        "✅ Ключ работает! Z.ai отвечает. Если /api/diagnose всё ещё падает — проблема в чём-то другом, посмотрите Vercel Logs.";
-    } else if (response.status === 401) {
-      envStatus.diagnosis =
-        "❌ Ключ Z.ai невалиден (401). Создайте новый на https://z.ai/manage/apikey и обновите ZAI_API_KEY в Vercel.";
-      envStatus.next_steps = [
-        "1. Откройте https://z.ai/manage/apikey",
-        "2. Создайте новый ключ",
-        "3. Vercel → Settings → Environment Variables → ZAI_API_KEY → отредактировать",
-        "4. Вставьте новый ключ",
-        "5. Deployments → Redeploy",
-      ];
-    } else if (response.status === 403) {
-      envStatus.diagnosis =
-        "❌ Доступ запрещён (403). Проверьте, что аккаунт Z.ai активен и у ключа есть права.";
-    } else if (response.status === 429) {
-      envStatus.diagnosis =
-        "⚠️ Превышен лимит (429). Подождите минуту или пополните баланс на https://z.ai.";
-    } else {
-      envStatus.diagnosis = `❌ Z.ai вернул ошибку ${response.status}. Смотрите детали ниже.`;
+      const bodyText = await response.text();
+      clearTimeout(timeout);
+
+      envStatus.zai_models_test.push({
+        model,
+        status: response.status,
+        ok: response.ok,
+        response_preview: bodyText.slice(0, 200),
+      });
+
+      if (response.ok && !workingModel) {
+        workingModel = model;
+      }
+    } catch (e) {
+      envStatus.zai_models_test.push({
+        model,
+        status: 0,
+        ok: false,
+        response_preview: `Error: ${(e as Error).message}`,
+      });
     }
-  } catch (e) {
-    envStatus.zai_test_call = {
-      url: testUrl,
-      status: 0,
-      ok: false,
-      response_preview: "",
-      error: (e as Error).message,
-    };
-    envStatus.diagnosis = `❌ Не удалось подключиться к Z.ai: ${(e as Error).message}`;
+  }
+
+  if (workingModel) {
+    envStatus.diagnosis = `✅ Ключ работает! Рабочая модель: ${workingModel}. Диагностика должна работать на главной странице.`;
+  } else if (envStatus.zai_models_test.some((m) => m.status === 401)) {
+    envStatus.diagnosis =
+      "❌ Ключ Z.ai невалиден (401). Создайте новый на https://z.ai/manage/apikey и обновите ZAI_API_KEY в Vercel.";
+    envStatus.next_steps = [
+      "1. Откройте https://z.ai/manage/apikey",
+      "2. Создайте новый ключ",
+      "3. Vercel → Settings → Environment Variables → ZAI_API_KEY → отредактировать",
+      "4. Вставьте новый ключ",
+      "5. Deployments → Redeploy",
+    ];
+  } else if (envStatus.zai_models_test.some((m) => m.status === 403)) {
+    envStatus.diagnosis =
+      "❌ Доступ запрещён (403). Проверьте, что аккаунт Z.ai активен и у ключа есть права.";
+  } else if (envStatus.zai_models_test.some((m) => m.status === 429)) {
+    envStatus.diagnosis =
+      "⚠️ Превышен лимит (429). Подождите минуту или пополните баланс на https://z.ai.";
+  } else {
+    envStatus.diagnosis =
+      "❌ Ни одна модель не сработала. Смотрите детали ниже — возможно, нужно активировать модель в личном кабинете Z.ai.";
   }
 
   return NextResponse.json(envStatus, { status: 200 });

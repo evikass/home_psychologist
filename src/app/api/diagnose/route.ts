@@ -42,53 +42,92 @@ async function callZaiChat(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 45000); // 45 сек таймаут
 
+  // Список моделей по приоритету — пробуем по очереди, пока не сработает.
+  // Z.ai периодически переименовывает модели (добавляют суффикс даты).
+  const MODELS_TO_TRY = [
+    "glm-4-flash-250414", // актуальная flash с датой
+    "glm-4-flash",         // старый алиас
+    "glm-4-air",           // более умная, но дешёвая
+    "glm-4.5-flash",       // новая 4.5 flash
+    "glm-4.6-flash",       // новая 4.6 flash
+    "glm-4-plus",          // плюс версия
+    "glm-4",               // базовая
+  ];
+
+  let lastError: { ok: false; status: number; body: string } | null = null;
+
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "glm-4-flash", // быстрая и дешёвая модель
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userText },
-        ],
-        temperature: 0.6,
-        max_tokens: 2000,
-        thinking: { type: "disabled" },
-      }),
-      signal: controller.signal,
-    });
+    for (const model of MODELS_TO_TRY) {
+      console.log(`[diagnose] trying model: ${model}`);
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userText },
+          ],
+          temperature: 0.6,
+          max_tokens: 2000,
+          thinking: { type: "disabled" },
+        }),
+        signal: controller.signal,
+      });
 
-    const bodyText = await response.text();
+      const bodyText = await response.text();
 
-    if (!response.ok) {
+      if (response.ok) {
+        let data: unknown;
+        try {
+          data = JSON.parse(bodyText);
+        } catch {
+          console.error("[diagnose] Z.ai response not JSON:", bodyText.slice(0, 500));
+          return { ok: false, status: 502, body: "Invalid JSON from Z.ai" };
+        }
+
+        const content =
+          (data as { choices?: { message?: { content?: string } }[] })?.choices?.[0]?.message
+            ?.content ?? "";
+
+        if (content) {
+          console.log(`[diagnose] success with model: ${model}, content length: ${content.length}`);
+          return { ok: true, content };
+        }
+
+        // Пустой content — пробуем следующую модель
+        console.warn(`[diagnose] model ${model} returned empty content, trying next`);
+        lastError = { ok: false, status: 502, body: `Empty content (model: ${model})` };
+        continue;
+      }
+
+      // Если ошибка не связана с моделью — выходим сразу
+      const isModelError =
+        response.status === 400 &&
+        (bodyText.includes("Unknown Model") ||
+          bodyText.includes("model") ||
+          bodyText.includes("Model"));
+
+      if (isModelError) {
+        console.warn(`[diagnose] model ${model} not available: ${bodyText.slice(0, 200)}`);
+        lastError = { ok: false, status: response.status, body: bodyText };
+        continue;
+      }
+
+      // Любая другая ошибка — возвращаем её сразу
       console.error(
         `[diagnose] Z.ai API error: status=${response.status} body=${bodyText.slice(0, 500)}`
       );
       return { ok: false, status: response.status, body: bodyText };
     }
 
-    let data: unknown;
-    try {
-      data = JSON.parse(bodyText);
-    } catch {
-      console.error("[diagnose] Z.ai response not JSON:", bodyText.slice(0, 500));
-      return { ok: false, status: 502, body: "Invalid JSON from Z.ai" };
-    }
-
-    const content =
-      (data as { choices?: { message?: { content?: string } }[] })?.choices?.[0]?.message
-        ?.content ?? "";
-
-    if (!content) {
-      console.error("[diagnose] Z.ai returned empty content. Full response:", bodyText.slice(0, 800));
-      return { ok: false, status: 502, body: "Empty content in Z.ai response" };
-    }
-
-    return { ok: true, content };
+    // Все модели не сработали
+    return (
+      lastError ?? { ok: false, status: 502, body: "All models failed" }
+    );
   } finally {
     clearTimeout(timeout);
   }
