@@ -402,6 +402,8 @@ export default function Home() {
                 entryId={currentEntryId ?? undefined}
                 doneProcessings={currentDoneProcessings}
                 onToggleDone={handleToggleDone}
+                originalText={text}
+                date={Date.now()}
               />
             </motion.div>
           )}

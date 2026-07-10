@@ -8,6 +8,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  Download,
   Flame,
   Heart,
   Layers,
@@ -26,9 +27,12 @@ import { Separator } from "@/components/ui/separator";
 import { LevelScale } from "@/components/level-scale";
 import { ConsciousnessGeometry } from "@/components/consciousness-geometry";
 import { TransformationChain } from "@/components/transformation-chain";
+import { AiChat } from "@/components/ai-chat";
+import { PdfExport } from "@/components/pdf-export";
 import { PROCESSING_BY_TYPE } from "@/lib/masterkit-data";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
 import { useSpeech } from "@/hooks/use-speech";
+import { useI18n } from "@/components/language-provider";
 import { cn } from "@/lib/utils";
 
 const EMOTION_META: Record<
@@ -84,17 +88,23 @@ export function DiagnosisCard({
   entryId,
   doneProcessings = [],
   onToggleDone,
+  originalText,
+  date,
 }: {
   data: DiagnoseResponse;
   entryId?: string;
   doneProcessings?: string[];
   onToggleDone?: (processingIndex: number) => void;
+  originalText?: string;
+  date?: number;
 }) {
   const [localDone, setLocalDone] = useState<Set<string>>(
     new Set(doneProcessings)
   );
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
   const { speaking, speakSequence, stop, supported: ttsSupported } = useSpeech("ru-RU");
+  const { lang } = useI18n();
 
   const handleToggle = (index: number) => {
     const key = String(index);
@@ -151,9 +161,20 @@ export function DiagnosisCard({
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="font-display text-lg sm:text-xl font-semibold leading-snug mb-2">
-              Что происходит
-            </h3>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h3 className="font-display text-lg sm:text-xl font-semibold leading-snug">
+                {lang === "en" ? "What's happening" : "Что происходит"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setPdfOpen(true)}
+                className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors shrink-0"
+                title={lang === "en" ? "Export to PDF" : "Экспорт в PDF"}
+              >
+                <Download className="h-3 w-3" />
+                <span className="hidden sm:inline">{lang === "en" ? "PDF" : "PDF"}</span>
+              </button>
+            </div>
             <p className="text-sm sm:text-base text-foreground/85 leading-relaxed">
               {data.diagnosis_summary}
             </p>
@@ -454,8 +475,24 @@ export function DiagnosisCard({
       {/* 7. Подсказка про iterative use */}
       <div className="text-center text-xs text-muted-foreground pt-1">
         <ArrowRight className="inline h-3 w-3 mr-1" />
-        После проработки опишите, что изменилось — получите следующий слой.
+        {lang === "en"
+          ? "After the practice, describe what changed — get the next layer."
+          : "После проработки опишите, что изменилось — получите следующий слой."}
       </div>
+
+      {/* 8. AI-чат для углублённой проработки */}
+      <Block delay={0.3}>
+        <AiChat diagnosis={data} lang={lang} />
+      </Block>
+
+      {/* PDF-экспорт */}
+      <PdfExport
+        open={pdfOpen}
+        onOpenChange={setPdfOpen}
+        diagnosis={data}
+        originalText={originalText}
+        date={date}
+      />
     </motion.div>
   );
 }
