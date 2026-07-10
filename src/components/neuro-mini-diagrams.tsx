@@ -61,7 +61,7 @@ export function MipsMiniDiagram({ activeLevel }: { activeLevel: number }) {
               x={x + 10}
               y={y + LEVEL_HEIGHT / 2 + 1}
               textAnchor="start"
-              fontSize="10"
+              fontSize="13"
               fontWeight={isActive ? 700 : 500}
               fill="white"
               opacity={isActive ? 1 : 0.7}
@@ -72,7 +72,7 @@ export function MipsMiniDiagram({ activeLevel }: { activeLevel: number }) {
               x={CENTER_X}
               y={y + LEVEL_HEIGHT / 2 + 1}
               textAnchor="middle"
-              fontSize="9"
+              fontSize="12"
               fontWeight={isActive ? 700 : 400}
               fill="white"
               opacity={isActive ? 1 : 0.6}
@@ -162,7 +162,7 @@ export function BrainwaveMiniBar({ activeState }: { activeState: string }) {
                 x={x + 22.5}
                 y={isActive ? 58 : 52}
                 textAnchor="middle"
-                fontSize="8"
+                fontSize="11"
                 fontWeight={isActive ? 700 : 400}
                 fill={data.color}
                 opacity={isActive ? 1 : 0.5}
@@ -186,7 +186,7 @@ export function BrainwaveMiniBar({ activeState }: { activeState: string }) {
                   x={x + 22.5}
                   y={3}
                   textAnchor="middle"
-                  fontSize="10"
+                  fontSize="13"
                   fill={data.color}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0.3, 1, 0.3] }}
@@ -242,7 +242,7 @@ export function NeuroCycleMini({
                 </motion.div>
                 {/* Название */}
                 <div
-                  className="text-[10px] font-semibold mt-1.5 text-center leading-tight"
+                  className="text-xs font-semibold mt-1.5 text-center leading-tight"
                   style={{ color }}
                 >
                   {stage.stage_name}
@@ -343,7 +343,7 @@ export function IntegrationTimeline({
                 />
                 {/* День */}
                 <div
-                  className={`text-[10px] font-semibold mt-1.5 text-center whitespace-nowrap ${
+                  className={`text-xs font-semibold mt-1.5 text-center whitespace-nowrap ${
                     i === markers.length - 1 ? "text-primary" : "text-muted-foreground"
                   }`}
                 >
@@ -366,7 +366,7 @@ export function IntegrationTimeline({
               transition={{ delay: 0.8 + i * 0.1 }}
               className="flex items-start gap-2 text-xs rounded-lg bg-secondary/40 p-2.5"
             >
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                 {i + 1}
               </span>
               <span className="text-foreground/80 leading-relaxed">{cp}</span>

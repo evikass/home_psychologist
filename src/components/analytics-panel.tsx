@@ -235,7 +235,7 @@ export function AnalyticsPanel({
                           transition={{ duration: 0.5 }}
                           style={{ minHeight: "8px" }}
                         />
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {l.id}
                         </span>
                       </div>
@@ -291,7 +291,7 @@ function StatCard({
         {icon}
       </div>
       <div className="font-display text-lg font-bold leading-none">{value}</div>
-      <div className="text-[10px] text-muted-foreground mt-1 leading-tight">
+      <div className="text-xs text-muted-foreground mt-1 leading-tight">
         {label}
       </div>
     </div>
@@ -345,7 +345,7 @@ function TrendChart({
                 );
               })}
             </div>
-            <span className="text-[9px] text-muted-foreground whitespace-nowrap">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
               {t.dateLabel}
             </span>
           </div>
@@ -361,7 +361,7 @@ function TrendChart({
             <Badge
               key={id}
               variant="outline"
-              className="text-[10px] gap-1 py-0 h-5"
+              className="text-xs gap-1 py-0 h-5"
             >
               <span
                 className="h-2 w-2 rounded-full"

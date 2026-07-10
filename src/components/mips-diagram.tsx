@@ -38,7 +38,7 @@ export function MipsDiagram() {
             x={CENTER_X}
             y={12}
             textAnchor="middle"
-            fontSize="9"
+            fontSize="12"
             fill="#7a5a40"
             opacity="0.7"
           >
@@ -112,7 +112,7 @@ export function MipsDiagram() {
             x={CENTER_X}
             y={TOTAL_HEIGHT - 2}
             textAnchor="middle"
-            fontSize="9"
+            fontSize="12"
             fill="#7a5a40"
             opacity="0.7"
           >
@@ -152,7 +152,7 @@ export function MipsDiagram() {
             </p>
 
             <div className="mb-3">
-              <div className="text-[10px] uppercase tracking-wide font-semibold mb-1.5" style={{ color: selectedLevel.color, opacity: 0.7 }}>
+              <div className="text-xs uppercase tracking-wide font-semibold mb-1.5" style={{ color: selectedLevel.color, opacity: 0.7 }}>
                 Примеры программ:
               </div>
               <ul className="space-y-1">
@@ -165,7 +165,7 @@ export function MipsDiagram() {
             </div>
 
             <div className="pt-2 border-t" style={{ borderColor: `${selectedLevel.color}33` }}>
-              <div className="text-[10px] uppercase tracking-wide font-semibold mb-1" style={{ color: selectedLevel.color, opacity: 0.7 }}>
+              <div className="text-xs uppercase tracking-wide font-semibold mb-1" style={{ color: selectedLevel.color, opacity: 0.7 }}>
                 Что меняется:
               </div>
               <p className="text-xs" style={{ color: selectedLevel.color }}>

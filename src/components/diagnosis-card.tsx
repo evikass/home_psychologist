@@ -168,7 +168,7 @@ export function DiagnosisCard({
               <button
                 type="button"
                 onClick={() => setPdfOpen(true)}
-                className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors shrink-0"
+                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors shrink-0"
                 title={lang === "en" ? "Export to PDF" : "Экспорт в PDF"}
               >
                 <Download className="h-3 w-3" />
@@ -217,7 +217,7 @@ export function DiagnosisCard({
           </div>
         </div>
         <LevelScale activeId={data.level.id} />
-        <p className="mt-4 text-sm text-foreground/75 leading-relaxed">
+        <p className="mt-4 text-base text-foreground/75 leading-relaxed">
           {data.level.summary}
         </p>
       </Block>
@@ -248,7 +248,7 @@ export function DiagnosisCard({
                     <span className="font-medium text-foreground">{e.name}</span>
                     <Badge
                       variant="outline"
-                      className="ml-auto text-[10px] py-0 px-1.5 h-5"
+                      className="ml-auto text-xs py-0 px-1.5 h-5"
                     >
                       {INTENSITY_LABEL[e.intensity] ?? e.intensity}
                     </Badge>
@@ -280,7 +280,7 @@ export function DiagnosisCard({
 
           {/* Цитата-доказательство из текста */}
           <div className="mt-4 rounded-lg border-l-4 bg-secondary/40 px-4 py-2.5 text-sm">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
               Почему {data.beingness.name}
             </div>
             <p className="italic text-foreground/80 leading-relaxed">
@@ -306,7 +306,7 @@ export function DiagnosisCard({
             <div className="font-display text-xl font-semibold text-destructive mb-1">
               {data.pit.name}
             </div>
-            <p className="text-sm text-foreground/80 leading-relaxed mb-3">
+            <p className="text-base text-foreground/80 leading-relaxed mb-3">
               {data.pit.explanation}
             </p>
             {data.pit.signs_matched.length > 0 && (
@@ -315,7 +315,7 @@ export function DiagnosisCard({
                   <Badge
                     key={i}
                     variant="outline"
-                    className="text-[11px] border-destructive/30 text-destructive bg-background/60"
+                    className="text-xs border-destructive/30 text-destructive bg-background/60"
                   >
                     {s}
                   </Badge>
@@ -336,7 +336,7 @@ export function DiagnosisCard({
           {totalCount > 0 && (
             <Badge
               variant={doneCount === totalCount ? "default" : "secondary"}
-              className="ml-auto text-[10px]"
+              className="ml-auto text-xs"
             >
               {doneCount} / {totalCount}
               {doneCount === totalCount && " ✓"}
@@ -372,11 +372,11 @@ export function DiagnosisCard({
                       <h4 className="font-display text-base font-semibold leading-snug">
                         {p.title}
                       </h4>
-                      <Badge variant="secondary" className="text-[10px] h-5">
+                      <Badge variant="secondary" className="text-xs h-5">
                         {meta?.type ?? p.type}
                       </Badge>
                       {isDone && (
-                        <Badge className="text-[10px] h-5 bg-primary/15 text-primary border-primary/30">
+                        <Badge className="text-xs h-5 bg-primary/15 text-primary border-primary/30">
                           <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
                           сделано
                         </Badge>
@@ -393,7 +393,7 @@ export function DiagnosisCard({
                         type="button"
                         onClick={() => handleSpeakProcessing(i)}
                         className={cn(
-                          "flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-colors",
+                          "flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors",
                           speakingIndex === i && speaking
                             ? "bg-primary text-primary-foreground"
                             : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -416,7 +416,7 @@ export function DiagnosisCard({
                         onCheckedChange={() => handleToggle(i)}
                         id={`done-${entryId ?? "current"}-${i}`}
                       />
-                      <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">
+                      <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
                         сделал(а)
                       </span>
                     </label>
@@ -427,8 +427,8 @@ export function DiagnosisCard({
 
                 <ol className="space-y-2 mb-3">
                   {p.steps.map((s, j) => (
-                    <li key={j} className="flex gap-2.5 text-sm leading-relaxed">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground">
+                    <li key={j} className="flex gap-2.5 text-base leading-relaxed">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
                         {j + 1}
                       </span>
                       <span className="text-foreground/85">{s}</span>
@@ -461,7 +461,7 @@ export function DiagnosisCard({
               <Lightbulb className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1">
-              <div className="text-[11px] uppercase tracking-wide text-primary font-semibold mb-1">
+              <div className="text-xs uppercase tracking-wide text-primary font-semibold mb-1">
                 Следующий шаг сегодня
               </div>
               <p className="text-sm sm:text-base text-foreground font-medium leading-snug">

@@ -162,7 +162,7 @@ export function ConsciousnessGeometry({
                 x="10"
                 y="14"
                 textAnchor="middle"
-                fontSize="8"
+                fontSize="11"
                 fill="#ca8a04"
                 opacity="0.4"
               >
@@ -267,7 +267,7 @@ export function ConsciousnessGeometry({
                   x={pos.x}
                   y={pos.y - 22}
                   textAnchor="middle"
-                  fontSize="8"
+                  fontSize="11"
                   fontWeight={isActive ? 700 : 500}
                   fill={isActive ? w.color.base : "#525252"}
                   style={{ pointerEvents: "none", userSelect: "none" }}
@@ -752,7 +752,7 @@ export function ConsciousnessGeometry({
           })}
         </svg>
 
-        <div className="text-center mt-1 text-[10px] text-muted-foreground">
+        <div className="text-center mt-1 text-xs text-muted-foreground">
           Нажмите на сегмент — увидите детали и путь перехода
         </div>
       </div>
@@ -842,7 +842,7 @@ export function ConsciousnessGeometry({
               {hoveredData.qualities.map((q, i) => (
                 <span
                   key={i}
-                  className="inline-block text-[10px] px-2 py-0.5 rounded-full"
+                  className="inline-block text-xs px-2 py-0.5 rounded-full"
                   style={{
                     backgroundColor: hoveredData.color.border,
                     color: "white",

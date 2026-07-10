@@ -128,7 +128,7 @@ export function ThemeToggle() {
               transition={{ duration: 0.15 }}
               className="absolute right-0 top-10 z-50 rounded-xl border bg-popover shadow-lg p-2 min-w-[160px]"
             >
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-2 py-1 mb-1">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold px-2 py-1 mb-1">
                 Палитра
               </div>
               {PALETTES.map((p) => (
@@ -148,7 +148,7 @@ export function ThemeToggle() {
                 </button>
               ))}
               {isDark && (
-                <p className="text-[10px] text-muted-foreground px-2 pt-1.5 pb-0.5 italic">
+                <p className="text-xs text-muted-foreground px-2 pt-1.5 pb-0.5 italic">
                   В тёмной теме индиго — звёздное небо ✨
                 </p>
               )}

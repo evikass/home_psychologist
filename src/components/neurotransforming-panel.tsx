@@ -265,7 +265,7 @@ function TechniquesTab() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="font-display font-semibold text-sm">{tech.name}</h4>
-                    <span className="text-[9px] uppercase tracking-wide text-muted-foreground">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
                       {tech.level}
                     </span>
                   </div>
@@ -286,20 +286,20 @@ function TechniquesTab() {
                   >
                     <div className="px-3 pb-3 pt-1 space-y-3 text-xs">
                       <div>
-                        <div className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wide mb-1">
+                        <div className="font-semibold text-muted-foreground uppercase text-xs tracking-wide mb-1">
                           Когда применять
                         </div>
                         <p className="text-foreground/80">{tech.when}</p>
                       </div>
 
                       <div>
-                        <div className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wide mb-1">
+                        <div className="font-semibold text-muted-foreground uppercase text-xs tracking-wide mb-1">
                           Шаги
                         </div>
                         <ol className="space-y-1.5">
                           {tech.steps.map((s, i) => (
                             <li key={i} className="flex gap-2">
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                                 {i + 1}
                               </span>
                               <span className="text-foreground/80 leading-relaxed">{s}</span>

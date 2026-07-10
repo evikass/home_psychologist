@@ -188,7 +188,7 @@ export function VoiceInput({
               animate={{ opacity: [1, 0.3, 1] }}
               transition={{ duration: 1, repeat: Infinity }}
             />
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               Говорите…
             </span>
           </motion.div>

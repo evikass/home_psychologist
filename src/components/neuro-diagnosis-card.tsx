@@ -70,7 +70,7 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
         </div>
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
               Название программы
             </div>
             <p className="font-display font-semibold text-base text-primary">
@@ -79,19 +79,19 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
           </div>
           <Separator />
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
               Что повторяется
             </div>
-            <p className="text-sm text-foreground/85 leading-relaxed">
+            <p className="text-base text-foreground/85 leading-relaxed">
               {data.program.description}
             </p>
           </div>
           <Separator />
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
               Источник (корень)
             </div>
-            <p className="text-sm text-foreground/85 leading-relaxed italic">
+            <p className="text-base text-foreground/85 leading-relaxed italic">
               {data.program.source}
             </p>
           </div>
@@ -125,14 +125,14 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
               {data.mips_level.name}
             </div>
             <p
-              className="text-sm leading-relaxed mb-2"
+              className="text-base leading-relaxed mb-2"
               style={{ color: mipsLevelData?.color ?? "#525252" }}
             >
               {data.mips_level.explanation}
             </p>
             {mipsLevelData && (
               <div className="pt-2 border-t" style={{ borderColor: `${mipsLevelData.color}33` }}>
-                <div className="text-[10px] uppercase tracking-wide font-semibold mb-1 opacity-70" style={{ color: mipsLevelData.color }}>
+                <div className="text-xs uppercase tracking-wide font-semibold mb-1 opacity-70" style={{ color: mipsLevelData.color }}>
                   Что меняется на этом уровне
                 </div>
                 <p className="text-xs" style={{ color: mipsLevelData.color }}>
@@ -146,7 +146,7 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
             <MipsMiniDiagram activeLevel={data.mips_level.id} />
           </div>
         </div>
-        <div className="mt-2 text-[10px] text-muted-foreground text-center">
+        <div className="mt-2 text-xs text-muted-foreground text-center">
           Уровень {data.mips_level.id} из 8 · глубже → сложнее изменить, но изменения устойчивее
         </div>
       </Block>
@@ -180,7 +180,7 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
               {stateData?.frequency}
             </span>
           </div>
-          <p className="text-sm leading-relaxed" style={{ color: stateColor }}>
+          <p className="text-base leading-relaxed" style={{ color: stateColor }}>
             {data.recommended_state.reason}
           </p>
           {stateData && (
@@ -272,8 +272,8 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
 
                 <ol className="space-y-2 mb-3">
                   {tech.steps.map((s, j) => (
-                    <li key={j} className="flex gap-2.5 text-sm leading-relaxed">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground">
+                    <li key={j} className="flex gap-2.5 text-base leading-relaxed">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
                         {j + 1}
                       </span>
                       <span className="text-foreground/85">{s}</span>
@@ -305,16 +305,16 @@ export function NeuroDiagnosisCard({ data }: { data: NeuroDiagnosis }) {
         </div>
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
               Ежедневная практика
             </div>
-            <p className="text-sm text-foreground/85 leading-relaxed">
+            <p className="text-base text-foreground/85 leading-relaxed">
               {data.integration_plan.daily_practice}
             </p>
           </div>
           {/* Графический таймлайн */}
           <div className="pt-2">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
               Таймлайн интеграции
             </div>
             <IntegrationTimeline

@@ -27,7 +27,7 @@ export function LevelScale({ activeId }: { activeId: number }) {
               >
                 <span
                   className={cn(
-                    "text-[10px] font-semibold leading-none mb-1",
+                    "text-xs font-semibold leading-none mb-1",
                     active && "scale-110"
                   )}
                 >
@@ -36,7 +36,7 @@ export function LevelScale({ activeId }: { activeId: number }) {
               </div>
               <span
                 className={cn(
-                  "text-[9px] sm:text-[10px] text-center leading-tight hidden sm:block",
+                  "text-xs sm:text-xs text-center leading-tight hidden sm:block",
                   active ? "text-foreground font-medium" : "text-muted-foreground/70"
                 )}
               >

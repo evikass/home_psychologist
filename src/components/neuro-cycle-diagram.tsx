@@ -167,7 +167,7 @@ export function NeuroCycleDiagram() {
                   x={pos.x}
                   y={pos.y + 10}
                   textAnchor="middle"
-                  fontSize="9"
+                  fontSize="12"
                   fill="white"
                   opacity="0.9"
                   style={{ pointerEvents: "none", userSelect: "none" }}

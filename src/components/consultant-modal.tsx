@@ -161,7 +161,7 @@ function TabButton({
     >
       <Icon className="h-4 w-4" />
       <span className="leading-tight">{label}</span>
-      <span className="text-[9px] opacity-70">{sublabel}</span>
+      <span className="text-xs opacity-70">{sublabel}</span>
     </button>
   );
 }
@@ -360,7 +360,7 @@ function AiConsultantTab() {
         </div>
       </div>
 
-      <div className="text-[10px] text-muted-foreground text-center">
+      <div className="text-xs text-muted-foreground text-center">
         Enter — отправить · Shift+Enter — новая строка · Сессия не сохраняется между визитами
       </div>
     </div>
@@ -478,7 +478,7 @@ ${situation}
                   <t.icon className="h-3.5 w-3.5 text-primary" />
                   <span className="text-xs font-medium">{t.name}</span>
                 </div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t.duration} · {t.format}
                 </div>
               </button>
@@ -497,7 +497,7 @@ ${situation}
             className="min-h-[120px] text-sm"
             maxLength={3000}
           />
-          <div className="text-[10px] text-muted-foreground text-right mt-0.5">
+          <div className="text-xs text-muted-foreground text-right mt-0.5">
             {situation.length} / 3000
           </div>
         </div>
@@ -511,7 +511,7 @@ ${situation}
           Сформировать заявку
         </Button>
 
-        <div className="text-[10px] text-muted-foreground text-center italic leading-relaxed pt-2 border-t">
+        <div className="text-xs text-muted-foreground text-center italic leading-relaxed pt-2 border-t">
           Заявка не отправляется автоматически. Вы получите текстовый файл,
           который нужно самостоятельно переслать наставнику. Это гарантирует,
           что ваши данные не покидают ваш контроль.
@@ -549,7 +549,7 @@ function TiersTab() {
                   <h4 className="font-display font-semibold text-sm">
                     {tier.name}
                   </h4>
-                  <Badge variant="secondary" className="text-[9px] h-4 py-0">
+                  <Badge variant="secondary" className="text-xs h-4 py-0">
                     демо
                   </Badge>
                 </div>
@@ -580,7 +580,7 @@ function TiersTab() {
         ))}
       </div>
 
-      <div className="text-[10px] text-muted-foreground text-center italic leading-relaxed pt-2 border-t">
+      <div className="text-xs text-muted-foreground text-center italic leading-relaxed pt-2 border-t">
         Данное приложение — независимый инструмент самотерапии, объединяющий открытые психологические методы.
       </div>
     </div>

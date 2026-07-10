@@ -581,11 +581,11 @@ export default function Home() {
                             <ChevronRight className="h-3 w-3 text-muted-foreground group-open:rotate-90 transition-transform shrink-0" />
                             <span className="font-medium text-xs">{c.title}</span>
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 ml-5 leading-snug">
+                          <p className="text-xs text-muted-foreground mt-0.5 ml-5 leading-snug">
                             {c.shortDescription}
                           </p>
                         </summary>
-                        <div className="mt-2 ml-5 space-y-1.5 text-[11px] leading-relaxed">
+                        <div className="mt-2 ml-5 space-y-1.5 text-xs leading-relaxed">
                           <p className="text-foreground/80">{c.fullDescription}</p>
                           <p className="text-primary/90 italic font-medium">
                             ✦ {c.keyInsight}
@@ -612,13 +612,13 @@ export default function Home() {
                             <ChevronRight className="h-3 w-3 text-muted-foreground group-open:rotate-90 transition-transform shrink-0" />
                             <span className="font-medium text-xs">{m.shortName}</span>
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 ml-5 leading-snug">
+                          <p className="text-xs text-muted-foreground mt-0.5 ml-5 leading-snug">
                             {m.name}
                           </p>
                         </summary>
-                        <div className="mt-2 ml-5 space-y-1.5 text-[11px] leading-relaxed">
+                        <div className="mt-2 ml-5 space-y-1.5 text-xs leading-relaxed">
                           <p className="text-foreground/80">{m.description}</p>
-                          <div className="text-[10px] text-muted-foreground font-semibold mt-1.5 mb-0.5">
+                          <div className="text-xs text-muted-foreground font-semibold mt-1.5 mb-0.5">
                             Принципы:
                           </div>
                           <ul className="space-y-0.5">
@@ -687,7 +687,7 @@ function Header({
           </div>
           <div className="flex flex-col leading-none min-w-0">
             <span className="font-display font-semibold text-base">Домашний психолог</span>
-            <span className="text-[10px] text-muted-foreground truncate">
+            <span className="text-xs text-muted-foreground truncate">
               ИИ-диагностика и самотерапия
             </span>
           </div>
@@ -736,7 +736,7 @@ function Header({
             {historyCount > 0 && (
               <Badge
                 variant="secondary"
-                className="ml-0.5 h-4 px-1.5 text-[10px] rounded-full"
+                className="ml-0.5 h-4 px-1.5 text-xs rounded-full"
               >
                 {historyCount}
               </Badge>
@@ -758,14 +758,14 @@ function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
       className="hero-gradient rounded-3xl p-6 sm:p-10 border border-primary/10 relative overflow-hidden"
     >
       <div className="relative z-10">
-        <Badge variant="secondary" className="mb-3 text-[11px]">
+        <Badge variant="secondary" className="mb-3 text-xs">
           <Sparkles className="h-3 w-3 mr-1" />
           Метод самотерапии
         </Badge>
         {IS_DEMO && (
           <Badge
             variant="outline"
-            className="mb-3 ml-2 text-[11px] border-amber-400/50 text-amber-700 bg-amber-50"
+            className="mb-3 ml-2 text-xs border-amber-400/50 text-amber-700 bg-amber-50"
           >
             Демо-версия
           </Badge>
@@ -893,7 +893,7 @@ function Footer({ onConsultant }: { onConsultant: () => void }) {
         >
           <Sparkles className="h-3.5 w-3.5" />
           Личный консультант
-          <Badge variant="outline" className="text-[9px] h-4 py-0 border-amber-400/50 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300">
+          <Badge variant="outline" className="text-xs h-4 py-0 border-amber-400/50 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300">
             демо
           </Badge>
         </button>

@@ -165,7 +165,7 @@ export function AiChat({
               {/* Стартовые вопросы — только если нет сообщений */}
               {messages.length === 0 && (
                 <div className="space-y-1.5">
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
                     {lang === "en" ? "Try asking:" : "Попробуйте спросить:"}
                   </div>
                   {starters.map((q, i) => (
@@ -269,7 +269,7 @@ export function AiChat({
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="text-[10px] text-muted-foreground text-center">
+              <div className="text-xs text-muted-foreground text-center">
                 {lang === "en"
                   ? "Enter — send, Shift+Enter — new line"
                   : "Enter — отправить, Shift+Enter — новая строка"}

@@ -112,7 +112,7 @@ export function BrainwaveDiagram() {
                   x={(x1 + x2) / 2}
                   y={TRACK_Y + 35}
                   textAnchor="middle"
-                  fontSize="9"
+                  fontSize="12"
                   fill="white"
                   opacity="0.85"
                   style={{ pointerEvents: "none", userSelect: "none" }}
@@ -125,7 +125,7 @@ export function BrainwaveDiagram() {
                   x={(x1 + x2) / 2}
                   y={TRACK_Y + TRACK_HEIGHT + 15}
                   textAnchor="middle"
-                  fontSize="9"
+                  fontSize="12"
                   fill="#7a5a40"
                   opacity={isSelected ? 1 : 0.5}
                   style={{ pointerEvents: "none", userSelect: "none" }}
@@ -141,7 +141,7 @@ export function BrainwaveDiagram() {
             x={PADDING}
             y={20}
             textAnchor="start"
-            fontSize="9"
+            fontSize="12"
             fill="#7a5a40"
             opacity="0.7"
           >
@@ -151,7 +151,7 @@ export function BrainwaveDiagram() {
             x={WIDTH - PADDING}
             y={20}
             textAnchor="end"
-            fontSize="9"
+            fontSize="12"
             fill="#7a5a40"
             opacity="0.7"
           >
@@ -159,10 +159,10 @@ export function BrainwaveDiagram() {
           </text>
 
           {/* Частота по краям */}
-          <text x={PADDING} y={HEIGHT - 5} textAnchor="start" fontSize="9" fill="#7a5a40" opacity="0.5">
+          <text x={PADDING} y={HEIGHT - 5} textAnchor="start" fontSize="12" fill="#7a5a40" opacity="0.5">
             0.5 Гц
           </text>
-          <text x={WIDTH - PADDING} y={HEIGHT - 5} textAnchor="end" fontSize="9" fill="#7a5a40" opacity="0.5">
+          <text x={WIDTH - PADDING} y={HEIGHT - 5} textAnchor="end" fontSize="12" fill="#7a5a40" opacity="0.5">
             30 Гц
           </text>
         </svg>
@@ -198,7 +198,7 @@ export function BrainwaveDiagram() {
           </p>
 
           <div className="mb-3">
-            <div className="text-[10px] uppercase tracking-wide font-semibold mb-1.5" style={{ color: selectedState.color, opacity: 0.7 }}>
+            <div className="text-xs uppercase tracking-wide font-semibold mb-1.5" style={{ color: selectedState.color, opacity: 0.7 }}>
               Когда возникает:
             </div>
             <p className="text-xs" style={{ color: selectedState.color }}>
@@ -207,14 +207,14 @@ export function BrainwaveDiagram() {
           </div>
 
           <div>
-            <div className="text-[10px] uppercase tracking-wide font-semibold mb-1.5" style={{ color: selectedState.color, opacity: 0.7 }}>
+            <div className="text-xs uppercase tracking-wide font-semibold mb-1.5" style={{ color: selectedState.color, opacity: 0.7 }}>
               Практики в этом состоянии:
             </div>
             <div className="flex flex-wrap gap-1.5">
               {selectedState.practices.map((p, i) => (
                 <span
                   key={i}
-                  className="text-[10px] px-2 py-0.5 rounded-full"
+                  className="text-xs px-2 py-0.5 rounded-full"
                   style={{
                     backgroundColor: selectedState.color,
                     color: "white",

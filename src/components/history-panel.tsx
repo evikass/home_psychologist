@@ -196,10 +196,10 @@ export function HistoryPanel({
                             >
                               {summary.beingnessName}
                             </span>
-                            <Badge variant="outline" className="text-[10px] h-5 py-0">
+                            <Badge variant="outline" className="text-xs h-5 py-0">
                               ур. {summary.levelId} · {summary.levelName}
                             </Badge>
-                            <span className="text-[10px] text-muted-foreground ml-auto flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
                               <Clock className="h-2.5 w-2.5" />
                               {formatHistoryDate(entry.timestamp)}
                             </span>

@@ -23,7 +23,7 @@ export function LiveHints({ text }: { text: string }) {
       animate={{ opacity: 1, y: 0 }}
       className="mt-2 rounded-lg bg-secondary/50 border border-primary/15 p-2.5"
     >
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1.5">
+      <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1.5">
         ИИ уже видит в вашем тексте:
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -36,7 +36,7 @@ export function LiveHints({ text }: { text: string }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ duration: 0.2, delay: i * 0.02 }}
-              className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full"
+              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
               style={{
                 backgroundColor: `${m.color}22`,
                 color: m.color,

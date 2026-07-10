@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-/* trigger rebuild */
+/* trigger rebuild v2 */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -130,9 +130,19 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-size: 17px; /* было 16px — увеличено для читаемости */
+  }
+  @media (max-width: 640px) {
+    html {
+      font-size: 16px; /* на мобильных чуть меньше, но всё равно комфортно */
+    }
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "ss01", "cv01";
+    font-size: 1rem;
+    line-height: 1.6;
   }
   h1, h2, h3, .font-display {
     font-family: var(--font-serif);

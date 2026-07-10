@@ -272,7 +272,7 @@ function Slide3() {
             <div className="font-display text-2xl font-bold text-primary">
               {s.num}
             </div>
-            <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+            <div className="text-xs text-muted-foreground mt-0.5 leading-tight">
               {s.label}
             </div>
           </div>
@@ -382,7 +382,7 @@ function Slide5() {
 
       {/* Демо-заглушки вместо внешних ссылок */}
       <div className="space-y-2">
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
           Каналы сообщества (демо)
         </div>
         {community.links.map((link, i) => (
@@ -400,7 +400,7 @@ function Slide5() {
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm flex items-center gap-2">
                 {link.label}
-                <Badge variant="outline" className="text-[9px] h-4 py-0 text-amber-700 border-amber-400/50 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300">
+                <Badge variant="outline" className="text-xs h-4 py-0 text-amber-700 border-amber-400/50 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300">
                   демо
                 </Badge>
               </div>
@@ -462,7 +462,7 @@ function Slide6() {
       </div>
 
       <div className="rounded-xl border-l-4 border-primary bg-primary/5 p-3 mb-4">
-        <div className="text-[10px] uppercase tracking-wide text-primary font-semibold mb-1">
+        <div className="text-xs uppercase tracking-wide text-primary font-semibold mb-1">
           Философия методики
         </div>
         <p className="text-sm italic text-foreground/80 leading-relaxed">
@@ -470,7 +470,7 @@ function Slide6() {
         </p>
       </div>
 
-      <div className="rounded-lg bg-secondary/40 p-3 text-[11px] text-muted-foreground italic leading-relaxed">
+      <div className="rounded-lg bg-secondary/40 p-3 text-xs text-muted-foreground italic leading-relaxed">
         <Shield className="h-3.5 w-3.5 inline-block mr-1 mb-0.5" />
         {author.disclaimer}
       </div>
