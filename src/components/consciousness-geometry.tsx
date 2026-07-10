@@ -2,17 +2,21 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { BEINGNESSES, type Beingness } from "@/lib/masterkit-data";
+import {
+  BEINGNESSES,
+  getTransitionsFrom,
+  type Beingness,
+} from "@/lib/masterkit-data";
 
 /**
- * Геометрия Сознания — интерактивная SVG-схема.
+ * Геометрия Сознания — интерактивная SVG-схема в таро-стиле.
  *
  * Структура:
- *   - Центральное «Я» (чёрный круг с буквой)
- *   - 5 цветных радиальных сегментов (бытийностей)
- *   - При active beingness — свечение + увеличение + панели
- *
- * Адаптивна: на мобильных рисует компактнее, на десктопе — крупнее.
+ *   - Центральное «Я» (чёрный круг с буквой, орнаментальная рамка)
+ *   - 9 цветных радиальных сегментов (бытийностей)
+ *   - Стрелки переходов от активной бытийности (куда двигаться)
+ *   - Внешний декоративный круг с рунами/стихиями
+ *   - При hover/click — панель детализации
  */
 export function ConsciousnessGeometry({
   activeBeingnessId,
@@ -26,23 +30,24 @@ export function ConsciousnessGeometry({
     activeBeingnessId ?? null
   );
 
-  // Сегменты-бытийности (без центра «Я»)
-  const segments = BEINGNESSES.filter((b) => b.id !== "self");
+  const segments = BEINGNESSES.filter(
+    (b) => b.id !== "self" && b.id !== "witness"
+  );
+  // НАБЛЮДАТЕЛЬ — на внешнем орбитальном круге, не сегмент
 
-  // Параметры круга
-  const SIZE = 360;
+  // Параметры
+  const SIZE = 440;
   const CENTER = SIZE / 2;
-  const INNER_R = 56;  // радиус центрального «Я»
-  const OUTER_R = 150; // внешний радиус
-  const LABEL_R = 178; // где ставить текст-метку
+  const INNER_R = 56;
+  const OUTER_R = 165;
+  const LABEL_R = 192;
+  const ORBIT_R = 210; // круг для НАБЛЮДАТЕЛЯ
 
-  // Преобразование угла (0 = верх, по часовой) в x,y
   const polar = (angleDeg: number, r: number) => {
     const rad = ((angleDeg - 90) * Math.PI) / 180;
     return { x: CENTER + r * Math.cos(rad), y: CENTER + r * Math.sin(rad) };
   };
 
-  // SVG path для сегмента (pie slice с радиальным градиентом)
   const segmentPath = (angleStart: number, angleEnd: number) => {
     const a1 = polar(angleStart, INNER_R);
     const a2 = polar(angleStart, OUTER_R);
@@ -59,28 +64,49 @@ export function ConsciousnessGeometry({
     ].join(" ");
   };
 
-  // Активный/выделенный сегмент
+  // Путь для стрелки между двумя точками через центр
+  const arrowPath = (fromAngle: number, toAngle: number) => {
+    const start = polar(fromAngle, OUTER_R - 8);
+    const end = polar(toAngle, OUTER_R - 8);
+    // Изогнутая стрелка, проходящая чуть снаружи
+    const midAngle = (fromAngle + toAngle) / 2;
+    const control = polar(midAngle, OUTER_R + 28);
+    return `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`;
+  };
+
   const activeId = activeBeingnessId ?? selectedId;
   const hovered = hoveredId ?? activeId;
   const hoveredData = BEINGNESSES.find((b) => b.id === hovered);
+
+  // Переходы из активной бытийности
+  const transitions = activeId && activeId !== "self" && activeId !== "witness"
+    ? getTransitionsFrom(activeId)
+    : [];
 
   const handleClick = (id: string) => {
     setSelectedId(id);
     onSelect?.(id);
   };
 
+  // Найти угол сегмента по id
+  const getAngle = (id: string) =>
+    BEINGNESSES.find((b) => b.id === id)?.angle ?? 0;
+
+  // Таро-руны по кругу (стихийные символы)
+  const RUNES = ["☽", "✦", "❋", "✺", "◈", "✷", "✤", "◉", "❂", "✵", "✸", "✧"];
+
   return (
     <div className="flex flex-col items-center gap-4 w-full">
-      <div className="relative w-full max-w-[400px] mx-auto">
+      <div className="relative w-full max-w-[460px] mx-auto">
         <svg
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           className="w-full h-auto"
           role="img"
-          aria-label="Геометрия сознания — карта 5 бытийностей"
+          aria-label="Геометрия сознания — карта 9 бытийностей"
         >
           <defs>
-            {/* Радиальные градиенты для каждого сегмента */}
-            {segments.map((b) => (
+            {/* Радиальные градиенты для сегментов */}
+            {BEINGNESSES.map((b) => (
               <radialGradient
                 key={b.id}
                 id={`grad-${b.id}`}
@@ -90,13 +116,13 @@ export function ConsciousnessGeometry({
                 gradientUnits="userSpaceOnUse"
               >
                 <stop offset="0%" stopColor={b.color.base} stopOpacity="0.95" />
-                <stop offset="70%" stopColor={b.color.base} stopOpacity="0.7" />
-                <stop offset="100%" stopColor={b.color.light} stopOpacity="0.4" />
+                <stop offset="70%" stopColor={b.color.base} stopOpacity="0.65" />
+                <stop offset="100%" stopColor={b.color.light} stopOpacity="0.35" />
               </radialGradient>
             ))}
 
-            {/* Свечение для активного сегмента */}
-            {segments.map((b) => (
+            {/* Свечение */}
+            {BEINGNESSES.map((b) => (
               <radialGradient
                 key={`glow-${b.id}`}
                 id={`glow-${b.id}`}
@@ -105,32 +131,152 @@ export function ConsciousnessGeometry({
                 r="50%"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop offset="0%" stopColor={b.color.glow} stopOpacity="0.5" />
+                <stop offset="0%" stopColor={b.color.glow} stopOpacity="0.55" />
                 <stop offset="100%" stopColor={b.color.glow} stopOpacity="0" />
               </radialGradient>
             ))}
 
+            {/* Золотой градиент для орнаментов */}
+            <linearGradient id="gold-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#eab308" />
+              <stop offset="50%" stopColor="#ca8a04" />
+              <stop offset="100%" stopColor="#a16207" />
+            </linearGradient>
+
             {/* Фильтр свечения */}
             <filter id="blur-glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="6" />
+              <feGaussianBlur stdDeviation="5" />
             </filter>
+
+            {/* Узор для рамки — повторяющиеся руны */}
+            <pattern
+              id="rune-pattern"
+              x="0"
+              y="0"
+              width="20"
+              height="20"
+              patternUnits="userSpaceOnUse"
+            >
+              <text
+                x="10"
+                y="14"
+                textAnchor="middle"
+                fontSize="8"
+                fill="#ca8a04"
+                opacity="0.4"
+              >
+                ✦
+              </text>
+            </pattern>
           </defs>
 
-          {/* Внешний круг-обрамление */}
+          {/* Внешний декоративный круг с рунами (таро-стиль) */}
           <circle
             cx={CENTER}
             cy={CENTER}
-            r={OUTER_R + 8}
+            r={ORBIT_R + 14}
             fill="none"
-            stroke="oklch(0.85 0.03 50)"
-            strokeWidth="1"
-            strokeDasharray="2 3"
+            stroke="url(#gold-grad)"
+            strokeWidth="1.5"
+            opacity="0.7"
+          />
+          <circle
+            cx={CENTER}
+            cy={CENTER}
+            r={ORBIT_R + 8}
+            fill="none"
+            stroke="#ca8a04"
+            strokeWidth="0.5"
+            strokeDasharray="1 3"
             opacity="0.5"
           />
 
+          {/* Руны по кругу */}
+          {RUNES.map((rune, i) => {
+            const a = (360 / RUNES.length) * i;
+            const pos = polar(a, ORBIT_R + 14);
+            return (
+              <text
+                key={i}
+                x={pos.x}
+                y={pos.y + 3}
+                textAnchor="middle"
+                fontSize="11"
+                fill="#a16207"
+                opacity="0.55"
+                style={{ userSelect: "none" }}
+              >
+                {rune}
+              </text>
+            );
+          })}
+
+          {/* Внутренний орбитальный круг для НАБЛЮДАТЕЛЯ */}
+          <circle
+            cx={CENTER}
+            cy={CENTER}
+            r={ORBIT_R}
+            fill="none"
+            stroke="#a3a3a3"
+            strokeWidth="0.8"
+            strokeDasharray="2 4"
+            opacity="0.4"
+          />
+
+          {/* НАБЛЮДАТЕЛЬ — орбитальная позиция (сверху) */}
+          {(() => {
+            const w = BEINGNESSES.find((b) => b.id === "witness");
+            if (!w) return null;
+            const pos = polar(0, ORBIT_R);
+            const isActive = activeId === "witness";
+            return (
+              <g
+                onClick={() => handleClick("witness")}
+                onMouseEnter={() => setHoveredId("witness")}
+                onMouseLeave={() => setHoveredId(null)}
+                style={{ cursor: "pointer" }}
+                tabIndex={0}
+                role="button"
+                aria-label="Бытийность НАБЛЮДАТЕЛЬ"
+              >
+                <motion.circle
+                  cx={pos.x}
+                  cy={pos.y}
+                  r={14}
+                  fill={w.color.base}
+                  stroke={isActive ? w.color.glow : "white"}
+                  strokeWidth={isActive ? 2.5 : 1.5}
+                  animate={{
+                    scale: isActive ? 1.2 : 1,
+                  }}
+                  style={{ transformOrigin: `${pos.x}px ${pos.y}px` }}
+                />
+                <text
+                  x={pos.x}
+                  y={pos.y + 4}
+                  textAnchor="middle"
+                  fontSize="14"
+                  style={{ pointerEvents: "none", userSelect: "none" }}
+                >
+                  {w.symbol}
+                </text>
+                <text
+                  x={pos.x}
+                  y={pos.y - 22}
+                  textAnchor="middle"
+                  fontSize="8"
+                  fontWeight={isActive ? 700 : 500}
+                  fill={isActive ? w.color.base : "#525252"}
+                  style={{ pointerEvents: "none", userSelect: "none" }}
+                >
+                  {w.name}
+                </text>
+              </g>
+            );
+          })()}
+
           {/* Сегменты-бытийности */}
-          {segments.map((b, i) => {
-            // Каждый сегмент — 72° (360/5), со смещением для равномерности
+          {segments.map((b) => {
             const segmentAngle = 360 / segments.length;
             const startAngle = b.angle - segmentAngle / 2;
             const endAngle = b.angle + segmentAngle / 2;
@@ -169,8 +315,8 @@ export function ConsciousnessGeometry({
                   strokeWidth={isActive ? 2.5 : 1}
                   initial={false}
                   animate={{
-                    scale: isActive ? 1.04 : 1,
-                    opacity: activeId && !isActive ? 0.55 : 1,
+                    scale: isActive ? 1.05 : 1,
+                    opacity: activeId && !isActive ? 0.5 : 1,
                   }}
                   transition={{ duration: 0.3 }}
                   style={{
@@ -184,13 +330,13 @@ export function ConsciousnessGeometry({
                   y={polar(b.angle, (INNER_R + OUTER_R) / 2 + 8).y}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fontSize="20"
+                  fontSize="22"
                   style={{ pointerEvents: "none", userSelect: "none" }}
                 >
                   {b.symbol}
                 </text>
 
-                {/* Название сегмента (внешняя метка) */}
+                {/* Название сегмента */}
                 <text
                   x={labelPos.x}
                   y={labelPos.y}
@@ -211,14 +357,79 @@ export function ConsciousnessGeometry({
             );
           })}
 
-          {/* Внутренний круг-разделитель */}
+          {/* Стрелки переходов от активной бытийности */}
+          {activeId &&
+            activeId !== "self" &&
+            activeId !== "witness" &&
+            transitions.map((t, i) => {
+              if (t.to === "self") return null; // стрелку в центр не рисуем
+              const fromAngle = getAngle(t.from);
+              const toAngle = getAngle(t.to);
+              const path = arrowPath(fromAngle, toAngle);
+              const midAngle = (fromAngle + toAngle) / 2;
+              const labelPos = polar(midAngle, OUTER_R + 42);
+              const toData = BEINGNESSES.find((b) => b.id === t.to);
+
+              return (
+                <motion.g
+                  key={`trans-${i}`}
+                  initial={{ opacity: 0, pathLength: 0 }}
+                  animate={{ opacity: 1, pathLength: 1 }}
+                  transition={{ duration: 0.6, delay: 0.2 + i * 0.1 }}
+                >
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke={toData?.color.glow ?? "#ca8a04"}
+                    strokeWidth="2"
+                    strokeDasharray="4 3"
+                    opacity="0.7"
+                    markerEnd="url(#arrowhead)"
+                  />
+                  {/* Маленькая метка «→» у конца стрелки */}
+                  <circle
+                    cx={polar(toAngle, OUTER_R - 8).x}
+                    cy={polar(toAngle, OUTER_R - 8).y}
+                    r="3"
+                    fill={toData?.color.glow ?? "#ca8a04"}
+                  />
+                </motion.g>
+              );
+            })}
+
+          {/* Маркер стрелки */}
+          <defs>
+            <marker
+              id="arrowhead"
+              markerWidth="8"
+              markerHeight="8"
+              refX="4"
+              refY="4"
+              orient="auto"
+            >
+              <path d="M 0 0 L 8 4 L 0 8 z" fill="#ca8a04" />
+            </marker>
+          </defs>
+
+          {/* Внутренний круг-разделитель с золотой рамкой (таро-стиль) */}
+          <circle
+            cx={CENTER}
+            cy={CENTER}
+            r={INNER_R + 4}
+            fill="none"
+            stroke="url(#gold-grad)"
+            strokeWidth="1.5"
+            opacity="0.8"
+          />
           <circle
             cx={CENTER}
             cy={CENTER}
             r={INNER_R}
             fill="none"
-            stroke="oklch(0.9 0.02 50)"
-            strokeWidth="2"
+            stroke="#ca8a04"
+            strokeWidth="0.5"
+            strokeDasharray="2 2"
+            opacity="0.6"
           />
 
           {/* Центральное «Я» */}
@@ -243,15 +454,31 @@ export function ConsciousnessGeometry({
             stroke={BEINGNESSES[0].color.glow}
             strokeWidth="2"
             animate={{
-              r: [INNER_R - 4, INNER_R + 4, INNER_R - 4],
-              opacity: [0.6, 0.2, 0.6],
+              r: [INNER_R - 4, INNER_R + 6, INNER_R - 4],
+              opacity: [0.6, 0.15, 0.6],
             }}
             transition={{
-              duration: 4,
+              duration: 4.5,
               repeat: Infinity,
               ease: "easeInOut",
             }}
           />
+
+          {/* Орнаментальные точки вокруг «Я» */}
+          {Array.from({ length: 12 }).map((_, i) => {
+            const a = (360 / 12) * i;
+            const pos = polar(a, INNER_R - 12);
+            return (
+              <circle
+                key={i}
+                cx={pos.x}
+                cy={pos.y}
+                r="1.2"
+                fill="#ca8a04"
+                opacity="0.5"
+              />
+            );
+          })}
 
           {/* Буква «Я» в центре */}
           <text
@@ -259,7 +486,7 @@ export function ConsciousnessGeometry({
             y={CENTER}
             textAnchor="middle"
             dominantBaseline="middle"
-            fontSize="36"
+            fontSize="38"
             fontWeight="800"
             fill="white"
             style={{ pointerEvents: "none", userSelect: "none" }}
@@ -287,26 +514,39 @@ export function ConsciousnessGeometry({
           })}
         </svg>
 
-        {/* Подсказка под схемой */}
         <div className="text-center mt-1 text-[10px] text-muted-foreground">
-          Нажмите на сегмент, чтобы узнать больше
+          Нажмите на сегмент — увидите детали и путь перехода
         </div>
       </div>
 
-      {/* Детализирующая панель — меняется при наведении/выборе */}
+      {/* Детализирующая панель */}
       {hoveredData && hoveredData.id !== "self" && (
         <motion.div
           key={hoveredData.id}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="w-full rounded-xl border-2 p-4 shadow-sm"
+          className="w-full rounded-xl border-2 p-4 shadow-sm relative"
           style={{
             backgroundColor: hoveredData.color.panel,
             borderColor: hoveredData.color.border,
             color: hoveredData.color.text,
           }}
         >
+          {/* Декоративная рамка таро-стиля */}
+          <div
+            className="absolute top-1 right-1 text-xs opacity-30"
+            style={{ color: hoveredData.color.border }}
+          >
+            ✦ ❋ ✦
+          </div>
+          <div
+            className="absolute bottom-1 left-1 text-xs opacity-30"
+            style={{ color: hoveredData.color.border }}
+          >
+            ✦ ❋ ✦
+          </div>
+
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-2xl">{hoveredData.symbol}</span>
             <div>
@@ -371,10 +611,39 @@ export function ConsciousnessGeometry({
               ))}
             </div>
           )}
+
+          {/* Блок переходов — куда двигаться из этой бытийности */}
+          {getTransitionsFrom(hoveredData.id).length > 0 && (
+            <div className="mt-3 pt-3 border-t" style={{ borderColor: `${hoveredData.color.border}33` }}>
+              <div
+                className="font-semibold mb-1.5 uppercase tracking-wide text-xs"
+                style={{ color: hoveredData.color.border }}
+              >
+                Куда двигаться →
+              </div>
+              <ul className="space-y-1.5">
+                {getTransitionsFrom(hoveredData.id).map((t, i) => {
+                  const target = BEINGNESSES.find((b) => b.id === t.to);
+                  return (
+                    <li key={i} className="flex items-start gap-2 text-xs">
+                      <span style={{ color: hoveredData.color.border }}>→</span>
+                      <div>
+                        <span className="font-medium" style={{ color: target?.color.border }}>
+                          {target?.name}
+                        </span>
+                        <span style={{ opacity: 0.7 }}> — {t.condition}. </span>
+                        <span style={{ opacity: 0.85 }}>{t.practice}</span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </motion.div>
       )}
 
-      {/* Если активный сегмент — отдельный бейдж «сейчас вы здесь» */}
+      {/* Активный бейдж */}
       {activeId && activeId !== "self" && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -384,8 +653,8 @@ export function ConsciousnessGeometry({
           <span
             className="inline-block px-3 py-1 rounded-full font-medium"
             style={{
-              backgroundColor: (BEINGNESSES.find((b) => b.id === activeId) as Beingness)?.color
-                .border,
+              backgroundColor:
+                (BEINGNESSES.find((b) => b.id === activeId) as Beingness)?.color.border,
               color: "white",
             }}
           >

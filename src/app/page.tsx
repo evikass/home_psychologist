@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen,
   ChevronRight,
+  History,
   Loader2,
   RotateCcw,
   Send,
@@ -21,6 +22,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { DiagnosisCard } from "@/components/diagnosis-card";
+import { HistoryPanel } from "@/components/history-panel";
+import {
+  useDiagnosisHistory,
+  type HistoryEntry,
+} from "@/hooks/use-diagnosis-history";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
 import { METHODOLOGY_SUMMARY, LEVELS, EMOTIONS } from "@/lib/masterkit-data";
 import { getDemoDiagnosis } from "@/lib/demo-diagnoses";
@@ -57,7 +63,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
+
+  const { history, addEntry, removeEntry, clearAll } = useDiagnosisHistory();
 
   const handleSubmit = async () => {
     if (text.trim().length < 20) {
@@ -73,7 +82,9 @@ export default function Home() {
         // GitHub Pages: статическая версия, ИИ недоступен.
         // Симулируем задержку для UX и подбираем диагноз по ключевым словам.
         await new Promise((r) => setTimeout(r, 1200));
-        setResult(getDemoDiagnosis(text));
+        const demoResult = getDemoDiagnosis(text);
+        setResult(demoResult);
+        addEntry(text, demoResult);
         return;
       }
 
@@ -92,7 +103,9 @@ export default function Home() {
           : "";
         throw new Error((data?.error || "Не удалось получить диагноз.") + envInfo);
       }
-      setResult(data as DiagnoseResponse);
+      const finalResult = data as DiagnoseResponse;
+      setResult(finalResult);
+      addEntry(text, finalResult);
     } catch (e) {
       const msg = (e as Error).message || "Что-то пошло не так.";
       setError(msg);
@@ -100,6 +113,14 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSelectHistory = (entry: HistoryEntry) => {
+    setText(entry.text);
+    setResult(entry.result);
+    setError(null);
+    setHistoryOpen(false);
+    toast.success("Загружен диагноз из истории");
   };
 
   const handleReset = () => {
@@ -122,7 +143,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header />
+      <Header
+        historyCount={history.length}
+        onOpenHistory={() => setHistoryOpen(true)}
+      />
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-24 safe-x">
         {/* HERO */}
@@ -358,12 +382,27 @@ export default function Home() {
         )}
       </main>
 
+      <HistoryPanel
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        history={history}
+        onClear={clearAll}
+        onSelect={handleSelectHistory}
+        onDelete={removeEntry}
+      />
+
       <Footer />
     </div>
   );
 }
 
-function Header() {
+function Header({
+  historyCount,
+  onOpenHistory,
+}: {
+  historyCount: number;
+  onOpenHistory: () => void;
+}) {
   return (
     <header className="sticky top-0 z-30 backdrop-blur-md bg-background/80 border-b safe-top">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
@@ -378,9 +417,28 @@ function Header() {
             </span>
           </div>
         </div>
-        <Badge variant="outline" className="hidden sm:inline-flex text-[11px]">
-          бета
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenHistory}
+            className="rounded-full h-8 gap-1.5 text-xs"
+          >
+            <History className="h-3.5 w-3.5" />
+            История
+            {historyCount > 0 && (
+              <Badge
+                variant="secondary"
+                className="ml-0.5 h-4 px-1.5 text-[10px] rounded-full"
+              >
+                {historyCount}
+              </Badge>
+            )}
+          </Button>
+          <Badge variant="outline" className="hidden sm:inline-flex text-[11px]">
+            бета
+          </Badge>
+        </div>
       </div>
     </header>
   );
