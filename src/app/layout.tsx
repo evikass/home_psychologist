@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
+import { LanguageProvider } from "@/components/language-provider";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -60,7 +62,14 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${fraunces.variable} antialiased bg-background text-foreground`}
       >
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <LanguageProvider>{children}</LanguageProvider>
+        </ThemeProvider>
         <Sonner
           position="top-center"
           toastOptions={{

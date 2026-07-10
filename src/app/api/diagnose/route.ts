@@ -312,6 +312,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const text = typeof body?.text === "string" ? body.text.trim() : "";
+    const lang = body?.lang === "en" ? "en" : "ru";
+
+    // Добавляем языковую инструкцию к промпту
+    const langInstruction =
+      lang === "en"
+        ? "\n\nВАЖНО: Весь диагноз и все тексты в JSON должны быть на АНГЛИЙСКОМ языке. " +
+          "Переводите названия уровней, эмоций, ям и бытийностей на английский. " +
+          "Проработки тоже на английском."
+        : "";
 
     if (text.length < 20) {
       return NextResponse.json(
@@ -347,7 +356,7 @@ export async function POST(req: NextRequest) {
       `[diagnose] start: text_length=${text.length}, key_length=${config.apiKey.length}, url=${config.baseUrl}, has_token=${!!config.token}`
     );
 
-    const result = await callZaiChat(config, SYSTEM_PROMPT, text);
+    const result = await callZaiChat(config, SYSTEM_PROMPT + langInstruction, text);
 
     if (!result.ok) {
       // Чёткое сообщение об ошибке авторизации

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   AlertCircle,
@@ -12,8 +12,12 @@ import {
   Heart,
   Layers,
   Lightbulb,
+  Pause,
+  Play,
   Sparkles,
+  Square,
   TriangleAlert,
+  Volume2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +27,7 @@ import { LevelScale } from "@/components/level-scale";
 import { ConsciousnessGeometry } from "@/components/consciousness-geometry";
 import { PROCESSING_BY_TYPE } from "@/lib/masterkit-data";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
+import { useSpeech } from "@/hooks/use-speech";
 import { cn } from "@/lib/utils";
 
 const EMOTION_META: Record<
@@ -58,6 +63,8 @@ export function DiagnosisCard({
   const [localDone, setLocalDone] = useState<Set<string>>(
     new Set(doneProcessings)
   );
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const { speaking, speakSequence, stop, supported: ttsSupported } = useSpeech("ru-RU");
 
   const handleToggle = (index: number) => {
     const key = String(index);
@@ -69,6 +76,31 @@ export function DiagnosisCard({
     });
     onToggleDone?.(index);
   };
+
+  const handleSpeakProcessing = useCallback(
+    (index: number) => {
+      if (speaking && speakingIndex === index) {
+        stop();
+        setSpeakingIndex(null);
+        return;
+      }
+      const p = data.processings[index];
+      if (!p) return;
+      const texts = [
+        `Проработка: ${p.title}.`,
+        p.why_now,
+        ...p.steps.map((s, i) => `Шаг ${i + 1}. ${s}`),
+        `Ожидаемый результат: ${p.expected}`,
+      ];
+      setSpeakingIndex(index);
+      speakSequence(texts, () => {});
+      // Очищаем speakingIndex при завершении
+      setTimeout(() => {
+        if (!speaking) setSpeakingIndex(null);
+      }, 100);
+    },
+    [data.processings, speaking, speakingIndex, speakSequence, stop]
+  );
 
   const doneCount = localDone.size;
   const totalCount = data.processings.length;
@@ -285,20 +317,41 @@ export function DiagnosisCard({
                       {p.why_now}
                     </p>
                   </div>
-                  {/* Чекбокс «сделано» */}
-                  <label
-                    className="flex items-center gap-1.5 cursor-pointer shrink-0 mt-1 group"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Checkbox
-                      checked={isDone}
-                      onCheckedChange={() => handleToggle(i)}
-                      id={`done-${entryId ?? "current"}-${i}`}
-                    />
-                    <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">
-                      сделал(а)
-                    </span>
-                  </label>
+                  {/* Чекбокс «сделано» + кнопка озвучки */}
+                  <div className="flex items-center gap-2 shrink-0 mt-1">
+                    {ttsSupported && (
+                      <button
+                        type="button"
+                        onClick={() => handleSpeakProcessing(i)}
+                        className={cn(
+                          "flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-colors",
+                          speakingIndex === i && speaking
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                        )}
+                        title={speakingIndex === i && speaking ? "Остановить" : "Озвучить проработку"}
+                      >
+                        {speakingIndex === i && speaking ? (
+                          <Square className="h-3 w-3" />
+                        ) : (
+                          <Volume2 className="h-3 w-3" />
+                        )}
+                      </button>
+                    )}
+                    <label
+                      className="flex items-center gap-1.5 cursor-pointer group"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={isDone}
+                        onCheckedChange={() => handleToggle(i)}
+                        id={`done-${entryId ?? "current"}-${i}`}
+                      />
+                      <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">
+                        сделал(а)
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
                 <Separator className="my-3" />

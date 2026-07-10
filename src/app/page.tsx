@@ -30,6 +30,10 @@ import { OnboardingModal, useOnboarding } from "@/components/onboarding-modal";
 import { RecommendationsPanel } from "@/components/recommendations-panel";
 import { LiveHints } from "@/components/live-hints";
 import { AmbientSound } from "@/components/ambient-sound";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { VoiceInput } from "@/components/voice-input";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useI18n } from "@/components/language-provider";
 import {
   useDiagnosisHistory,
   type HistoryEntry,
@@ -84,10 +88,11 @@ export default function Home() {
     toggleProcessingDone,
   } = useDiagnosisHistory();
   const { showOnboarding, setShowOnboarding, showAgain } = useOnboarding();
+  const { t, lang } = useI18n();
 
   const handleSubmit = async () => {
     if (text.trim().length < 20) {
-      toast.error("Опишите ситуацию подробнее — хотя бы 2–3 предложения.");
+      toast.error(t("error.too_short"));
       return;
     }
     setLoading(true);
@@ -111,7 +116,7 @@ export default function Home() {
       const res = await fetch("/api/diagnose", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, lang }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -234,12 +239,23 @@ export default function Home() {
           >
             <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
               <div className="p-4 sm:p-6">
-                <label
-                  htmlFor="complaint"
-                  className="block text-sm font-medium text-foreground/80 mb-2"
-                >
-                  Опишите свою ситуацию или цель своими словами
-                </label>
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                  <label
+                    htmlFor="complaint"
+                    className="block text-sm font-medium text-foreground/80"
+                  >
+                    {t("form.label")}
+                  </label>
+                  <VoiceInput
+                    onTranscribe={(transcribed) => {
+                      setText((prev) => {
+                        const sep = prev && !prev.endsWith(" ") ? " " : "";
+                        return prev + sep + transcribed;
+                      });
+                    }}
+                    disabled={loading}
+                  />
+                </div>
                 <Textarea
                   id="complaint"
                   value={text}
@@ -280,12 +296,12 @@ export default function Home() {
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      ИИ анализирует…
+                      {t("form.submitting")}
                     </>
                   ) : (
                     <>
                       <Send className="h-4 w-4" />
-                      Получить диагноз
+                      {t("form.submit")}
                     </>
                   )}
                 </Button>
@@ -369,7 +385,7 @@ export default function Home() {
             >
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-display text-lg sm:text-xl font-semibold">
-                  Ваш диагноз
+                  {t("result.title")}
                 </h2>
                 <Button
                   variant="outline"
@@ -378,7 +394,7 @@ export default function Home() {
                   className="rounded-full"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
-                  Новый запрос
+                  {t("result.new")}
                 </Button>
               </div>
               <DiagnosisCard
@@ -536,6 +552,8 @@ function Header({
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <AmbientSound />
+          <ThemeToggle />
+          <LanguageToggle />
           <Button
             variant="ghost"
             size="sm"
@@ -579,6 +597,7 @@ function Header({
 }
 
 function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
+  const { t, lang } = useI18n();
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
@@ -600,9 +619,12 @@ function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
           </Badge>
         )}
         <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight tracking-tight">
-          Где вы застряли —
-          <br />
-          и как из этого выйти
+          {t("hero.title").split("\n").map((line, i) => (
+            <span key={i}>
+              {i > 0 && <br />}
+              {line}
+            </span>
+          ))}
         </h1>
         <p className="mt-4 text-base sm:text-lg text-foreground/75 leading-relaxed max-w-xl">
           Опишите свою ситуацию своими словами — как жалобное письмо другу. ИИ
