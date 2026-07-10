@@ -7,6 +7,7 @@ import {
   getTransitionsFrom,
   type Beingness,
 } from "@/lib/masterkit-data";
+import { BEINGNESS_SYMBOLS, VoidSymbol } from "@/components/beingness-symbols";
 
 /**
  * Геометрия Сознания — интерактивная SVG-схема в таро-стиле.
@@ -251,15 +252,17 @@ export function ConsciousnessGeometry({
                   }}
                   style={{ transformOrigin: `${pos.x}px ${pos.y}px` }}
                 />
-                <text
-                  x={pos.x}
-                  y={pos.y + 4}
-                  textAnchor="middle"
-                  fontSize="14"
-                  style={{ pointerEvents: "none", userSelect: "none" }}
+                <foreignObject
+                  x={pos.x - 10}
+                  y={pos.y - 10}
+                  width="20"
+                  height="20"
+                  style={{ pointerEvents: "none" }}
                 >
-                  {w.symbol}
-                </text>
+                  <div style={{ width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <VoidSymbol size={18} />
+                  </div>
+                </foreignObject>
                 <text
                   x={pos.x}
                   y={pos.y - 22}
@@ -324,17 +327,25 @@ export function ConsciousnessGeometry({
                   }}
                 />
 
-                {/* Иконка сегмента (стихия) */}
-                <text
-                  x={polar(b.angle, (INNER_R + OUTER_R) / 2 + 8).x}
-                  y={polar(b.angle, (INNER_R + OUTER_R) / 2 + 8).y}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fontSize="22"
-                  style={{ pointerEvents: "none", userSelect: "none" }}
-                >
-                  {b.symbol}
-                </text>
+                {/* Оригинальная SVG-иконка стихии (не эмодзи) */}
+                {(() => {
+                  const Symbol = BEINGNESS_SYMBOLS[b.id];
+                  if (!Symbol) return null;
+                  const pos = polar(b.angle, (INNER_R + OUTER_R) / 2 + 8);
+                  return (
+                    <foreignObject
+                      x={pos.x - 14}
+                      y={pos.y - 14}
+                      width="28"
+                      height="28"
+                      style={{ pointerEvents: "none" }}
+                    >
+                      <div style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Symbol size={26} />
+                      </div>
+                    </foreignObject>
+                  );
+                })()}
 
                 {/* Название сегмента */}
                 <text
@@ -436,69 +447,61 @@ export function ConsciousnessGeometry({
           <defs>
             {/* Переливающийся радиальный градиент для центра */}
             <radialGradient id="self-gradient" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#2a1a3a">
+              <stop offset="0%" stopColor="#3a1a4a">
                 <animate
                   attributeName="stop-color"
-                  values="#2a1a3a;#4a2a5a;#2a1a3a"
+                  values="#3a1a4a;#5a2a6a;#3a1a4a;#2a1a3a;#3a1a4a"
                   dur="6s"
                   repeatCount="indefinite"
                 />
               </stop>
-              <stop offset="50%" stopColor="#1a1a2a">
+              <stop offset="60%" stopColor="#1a1a2a">
                 <animate
                   attributeName="stop-color"
-                  values="#1a1a2a;#2a2a4a;#1a1a2a"
+                  values="#1a1a2a;#2a2a4a;#1a1a2a;#0a0a1a;#1a1a2a"
                   dur="6s"
                   repeatCount="indefinite"
                 />
               </stop>
-              <stop offset="100%" stopColor="#0a0a1a" />
+              <stop offset="100%" stopColor="#0a0a0a" />
             </radialGradient>
 
-            {/* Золотой градиент для узоров */}
+            {/* Золотой градиент для узоров — ярче и насыщеннее */}
             <linearGradient id="gold-shimmer" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#fde68a">
+              <stop offset="0%" stopColor="#fef3c7">
                 <animate
                   attributeName="stop-color"
-                  values="#fde68a;#ca8a04;#fde68a;#fbbf24;#fde68a"
+                  values="#fef3c7;#fde68a;#fef3c7;#fbbf24;#fef3c7"
                   dur="8s"
                   repeatCount="indefinite"
                 />
               </stop>
-              <stop offset="50%" stopColor="#ca8a04">
+              <stop offset="50%" stopColor="#f59e0b">
                 <animate
                   attributeName="stop-color"
-                  values="#ca8a04;#fbbf24;#ca8a04;#fde68a;#ca8a04"
+                  values="#f59e0b;#fbbf24;#f59e0b;#fde68a;#f59e0b"
                   dur="8s"
                   repeatCount="indefinite"
                 />
               </stop>
-              <stop offset="100%" stopColor="#a16207">
+              <stop offset="100%" stopColor="#ca8a04">
                 <animate
                   attributeName="stop-color"
-                  values="#a16207;#ca8a04;#a16207;#78350f;#a16207"
+                  values="#ca8a04;#f59e0b;#ca8a04;#a16207;#ca8a04"
                   dur="8s"
                   repeatCount="indefinite"
                 />
               </stop>
             </linearGradient>
 
-            {/* Вращающийся узор-звезда */}
-            <pattern
-              id="mandala-pattern"
-              x="0"
-              y="0"
-              width="20"
-              height="20"
-              patternUnits="userSpaceOnUse"
-              patternTransform={`translate(${CENTER} ${CENTER})`}
-            >
-              <path
-                d="M 10 2 L 12 8 L 18 10 L 12 12 L 10 18 L 8 12 L 2 10 L 8 8 Z"
-                fill="url(#gold-shimmer)"
-                opacity="0.15"
-              />
-            </pattern>
+            {/* Свечение для центра */}
+            <filter id="center-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
 
           {/* Внешний переливающийся круг центра */}
@@ -514,7 +517,7 @@ export function ConsciousnessGeometry({
             style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
           />
 
-          {/* Вращающиеся симметричные узоры — 8-конечная звезда */}
+          {/* === Вращающиеся симметричные узоры — 8 лепестков (более заметные) === */}
           <motion.g
             style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
             animate={{ rotate: 360 }}
@@ -524,13 +527,12 @@ export function ConsciousnessGeometry({
               const angle = (360 / 8) * i;
               const rad = ((angle - 90) * Math.PI) / 180;
               const r1 = INNER_R - 8;
-              const r2 = INNER_R - 18;
-              const r3 = INNER_R - 12;
+              const r2 = INNER_R - 22;
+              const r3 = INNER_R - 14;
               const x1 = CENTER + r1 * Math.cos(rad);
               const y1 = CENTER + r1 * Math.sin(rad);
               const x2 = CENTER + r2 * Math.cos(rad);
               const y2 = CENTER + r2 * Math.sin(rad);
-              // Промежуточная точка для создания «лепестка»
               const midAngle = angle + 22.5;
               const midRad = ((midAngle - 90) * Math.PI) / 180;
               const mx = CENTER + r3 * Math.cos(midRad);
@@ -541,14 +543,15 @@ export function ConsciousnessGeometry({
                   d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`}
                   fill="none"
                   stroke="url(#gold-shimmer)"
-                  strokeWidth="0.8"
-                  opacity="0.5"
+                  strokeWidth="1.6"
+                  opacity="0.85"
+                  strokeLinecap="round"
                 />
               );
             })}
           </motion.g>
 
-          {/* Внутренняя вращающаяся в обратную сторону звезда (8 лучей) */}
+          {/* === Внутренние лепестки — второй слой (заполненные) === */}
           <motion.g
             style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
             animate={{ rotate: -360 }}
@@ -557,7 +560,7 @@ export function ConsciousnessGeometry({
             {Array.from({ length: 8 }).map((_, i) => {
               const angle = (360 / 8) * i + 22.5;
               const rad = ((angle - 90) * Math.PI) / 180;
-              const r1 = INNER_R - 14;
+              const r1 = INNER_R - 10;
               const r2 = INNER_R - 24;
               const x1 = CENTER + r1 * Math.cos(rad);
               const y1 = CENTER + r1 * Math.sin(rad);
@@ -571,15 +574,16 @@ export function ConsciousnessGeometry({
                   x2={x2}
                   y2={y2}
                   stroke="url(#gold-shimmer)"
-                  strokeWidth="0.5"
-                  opacity="0.4"
+                  strokeWidth="1.2"
+                  opacity="0.7"
+                  strokeLinecap="round"
                 />
               );
             })}
           </motion.g>
 
-          {/* Концентрические окружности — символ слоёв сознания */}
-          {[INNER_R - 8, INNER_R - 14, INNER_R - 20].map((r, i) => (
+          {/* Концентрические окружности — слои сознания (ярче) */}
+          {[INNER_R - 8, INNER_R - 16, INNER_R - 24].map((r, i) => (
             <circle
               key={i}
               cx={CENTER}
@@ -587,26 +591,26 @@ export function ConsciousnessGeometry({
               r={r}
               fill="none"
               stroke="url(#gold-shimmer)"
-              strokeWidth="0.4"
-              opacity={0.35 - i * 0.08}
-              strokeDasharray={i === 1 ? "1 2" : undefined}
+              strokeWidth={i === 0 ? "1" : "0.8"}
+              opacity={0.65 - i * 0.1}
+              strokeDasharray={i === 1 ? "2 2" : i === 2 ? "1 1" : undefined}
             />
           ))}
 
-          {/* 12 симметричных точек-звёзд по внутреннему кругу */}
+          {/* 12 симметричных точек-звёзд — больше и ярче */}
           {Array.from({ length: 12 }).map((_, i) => {
             const a = (360 / 12) * i;
-            const pos = polar(a, INNER_R - 10);
+            const pos = polar(a, INNER_R - 12);
             return (
               <motion.circle
                 key={i}
                 cx={pos.x}
                 cy={pos.y}
-                r="1.5"
+                r="2.2"
                 fill="url(#gold-shimmer)"
                 animate={{
-                  opacity: [0.3, 0.9, 0.3],
-                  scale: [1, 1.4, 1],
+                  opacity: [0.5, 1, 0.5],
+                  scale: [1, 1.5, 1],
                 }}
                 transition={{
                   duration: 3,
@@ -619,16 +623,16 @@ export function ConsciousnessGeometry({
             );
           })}
 
-          {/* 6-конечная звезда Давида (два треугольника) — сакральная геометрия */}
+          {/* 6-конечная звезда Давида — более заметная */}
           <motion.g
             style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
             animate={{ rotate: 360 }}
             transition={{ duration: 120, repeat: Infinity, ease: "linear" }}
-            opacity="0.25"
+            opacity="0.55"
           >
             <polygon
               points={(() => {
-                const r = INNER_R - 16;
+                const r = INNER_R - 18;
                 return Array.from({ length: 3 })
                   .map((_, i) => {
                     const a = (120 * i - 90) * (Math.PI / 180);
@@ -638,11 +642,11 @@ export function ConsciousnessGeometry({
               })()}
               fill="none"
               stroke="url(#gold-shimmer)"
-              strokeWidth="0.6"
+              strokeWidth="1.1"
             />
             <polygon
               points={(() => {
-                const r = INNER_R - 16;
+                const r = INNER_R - 18;
                 return Array.from({ length: 3 })
                   .map((_, i) => {
                     const a = (120 * i + 90) * (Math.PI / 180);
@@ -652,21 +656,44 @@ export function ConsciousnessGeometry({
               })()}
               fill="none"
               stroke="url(#gold-shimmer)"
-              strokeWidth="0.6"
+              strokeWidth="1.1"
             />
           </motion.g>
 
-          {/* Дыхательная аура вокруг «Я» */}
+          {/* Маленькая звезда в самом центре (перед «Я») */}
+          <motion.g
+            style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
+            animate={{ rotate: -360 }}
+            transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+            opacity="0.4"
+          >
+            {[0, 60, 120, 180, 240, 300].map((angle) => {
+              const rad = ((angle - 90) * Math.PI) / 180;
+              return (
+                <line
+                  key={angle}
+                  x1={CENTER}
+                  y1={CENTER}
+                  x2={CENTER + (INNER_R - 28) * Math.cos(rad)}
+                  y2={CENTER + (INNER_R - 28) * Math.sin(rad)}
+                  stroke="url(#gold-shimmer)"
+                  strokeWidth="0.7"
+                />
+              );
+            })}
+          </motion.g>
+
+          {/* Дыхательная аура вокруг «Я» — ярче */}
           <motion.circle
             cx={CENTER}
             cy={CENTER}
             r={INNER_R - 4}
             fill="none"
             stroke={BEINGNESSES[0].color.glow}
-            strokeWidth="2"
+            strokeWidth="2.5"
             animate={{
-              r: [INNER_R - 4, INNER_R + 6, INNER_R - 4],
-              opacity: [0.6, 0.15, 0.6],
+              r: [INNER_R - 4, INNER_R + 8, INNER_R - 4],
+              opacity: [0.7, 0.2, 0.7],
             }}
             transition={{
               duration: 4.5,
@@ -675,7 +702,7 @@ export function ConsciousnessGeometry({
             }}
           />
 
-          {/* Орнаментальные точки вокруг «Я» — внешний ряд */}
+          {/* Орнаментальные точки вокруг «Я» — внешний ряд (крупнее) */}
           {Array.from({ length: 24 }).map((_, i) => {
             const a = (360 / 24) * i;
             const pos = polar(a, INNER_R - 5);
@@ -684,9 +711,9 @@ export function ConsciousnessGeometry({
                 key={i}
                 cx={pos.x}
                 cy={pos.y}
-                r="0.8"
+                r="1.3"
                 fill="url(#gold-shimmer)"
-                opacity="0.4"
+                opacity="0.6"
               />
             );
           })}
@@ -759,7 +786,12 @@ export function ConsciousnessGeometry({
           </div>
 
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-2xl">{hoveredData.symbol}</span>
+            <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", color: hoveredData.color.border }}>
+              {(() => {
+                const Symbol = BEINGNESS_SYMBOLS[hoveredData.id] ?? VoidSymbol;
+                return <Symbol size={30} />;
+              })()}
+            </div>
             <div>
               <div
                 className="font-display text-lg font-bold leading-none"
