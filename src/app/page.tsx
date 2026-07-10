@@ -34,6 +34,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { VoiceInput } from "@/components/voice-input";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useI18n } from "@/components/language-provider";
+import { ConsultantModal } from "@/components/consultant-modal";
 import {
   useDiagnosisHistory,
   type HistoryEntry,
@@ -78,6 +79,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [consultantOpen, setConsultantOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -522,7 +524,9 @@ export default function Home() {
         onDelete={removeEntry}
       />
 
-      <Footer />
+      <ConsultantModal open={consultantOpen} onOpenChange={setConsultantOpen} />
+
+      <Footer onConsultant={() => setConsultantOpen(true)} />
     </div>
   );
 }
@@ -724,17 +728,29 @@ function LoadingState() {
   );
 }
 
-function Footer() {
+function Footer({ onConsultant }: { onConsultant: () => void }) {
   return (
     <footer className="mt-auto border-t bg-secondary/30">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 text-xs text-muted-foreground flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between safe-bottom">
-        <span>
-          © {new Date().getFullYear()} · Инструмент самопознания по методике
-          «Мастер Кит»
-        </span>
-        <span className="sm:text-right">
-          Не заменяет работу с психологом или наставником.
-        </span>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 text-xs text-muted-foreground flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between safe-bottom">
+        <div className="flex flex-col gap-1.5">
+          <span>
+            © {new Date().getFullYear()} · Инструмент самопознания по методике
+            «Мастер Кит»
+          </span>
+          <span>
+            Не заменяет работу с психологом или наставником.
+          </span>
+        </div>
+        <button
+          onClick={onConsultant}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors shrink-0"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          Личный консультант
+          <Badge variant="outline" className="text-[9px] h-4 py-0 border-amber-400/50 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300">
+            демо
+          </Badge>
+        </button>
       </div>
     </footer>
   );

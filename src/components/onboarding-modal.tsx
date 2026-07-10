@@ -28,6 +28,7 @@ import {
   CONCEPTS,
   METHODOLOGY_SUMMARY,
 } from "@/lib/masterkit-data";
+import { toast } from "sonner";
 
 const STORAGE_KEY = "masterkit_onboarding_seen_v1";
 
@@ -50,7 +51,7 @@ export function OnboardingModal({
   onOpenChange: (v: boolean) => void;
 }) {
   const [step, setStep] = useState(0);
-  const totalSteps = 5;
+  const totalSteps = 6;
 
   const handleClose = () => {
     try {
@@ -112,6 +113,7 @@ export function OnboardingModal({
               {step === 2 && <Slide3 />}
               {step === 3 && <Slide4 />}
               {step === 4 && <Slide5 />}
+              {step === 5 && <Slide6 />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -377,27 +379,100 @@ function Slide5() {
         ))}
       </ul>
 
+      {/* Демо-заглушки вместо внешних ссылок */}
       <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+          Каналы сообщества (демо)
+        </div>
         {community.links.map((link, i) => (
-          <a
+          <button
             key={i}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 rounded-lg border bg-card p-3 hover:border-primary/40 hover:shadow-sm transition-all group"
+            type="button"
+            onClick={() =>
+              toast.info("Демо: ссылка будет доступна после официального партнёрства с автором методики.", {
+                duration: 5000,
+              })
+            }
+            className="w-full flex items-center gap-3 rounded-lg border bg-card p-3 hover:border-primary/40 hover:shadow-sm transition-all group text-left"
           >
             <ArrowRight className="h-4 w-4 text-primary shrink-0 group-hover:translate-x-1 transition-transform" />
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm">{link.label}</div>
+              <div className="font-semibold text-sm flex items-center gap-2">
+                {link.label}
+                <Badge variant="outline" className="text-[9px] h-4 py-0 text-amber-700 border-amber-400/50 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300">
+                  демо
+                </Badge>
+              </div>
               <div className="text-xs text-muted-foreground">{link.description}</div>
             </div>
-          </a>
+          </button>
         ))}
       </div>
 
       <div className="mt-5 rounded-lg bg-secondary/40 p-3 text-xs text-muted-foreground italic leading-relaxed">
         <Shield className="h-3.5 w-3.5 inline-block mr-1 mb-0.5" />
         {community.note}
+      </div>
+    </div>
+  );
+}
+
+/** Слайд 6: О Дарье Трутневой — авторе методики */
+function Slide6() {
+  const author = ONBOARDING_DATA.author;
+  return (
+    <div>
+      <div className="mb-5">
+        <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary mb-2">
+          <Sparkles className="h-3.5 w-3.5" />
+          Автор методики
+        </div>
+        <h2 className="font-display text-2xl sm:text-3xl font-semibold leading-tight">
+          {author.name}
+        </h2>
+        <div className="text-sm text-primary font-medium mt-1">{author.role}</div>
+      </div>
+
+      {/* Портрет-заглушка */}
+      <div className="flex justify-center mb-4">
+        <div className="relative h-24 w-24 rounded-full bg-gradient-to-br from-primary/30 to-primary/5 border-2 border-primary/20 flex items-center justify-center shadow-sm">
+          <span className="font-display text-3xl font-bold text-primary">ДТ</span>
+          <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-background border-2 border-primary/30 flex items-center justify-center">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+          </div>
+        </div>
+      </div>
+
+      <p className="text-sm text-foreground/85 leading-relaxed mb-4">
+        {author.bio}
+      </p>
+
+      <div className="mb-4">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">
+          Ключевые идеи методики
+        </div>
+        <ul className="space-y-1.5">
+          {author.keyIdeas.map((idea, i) => (
+            <li key={i} className="flex items-start gap-2 text-xs leading-relaxed">
+              <span className="text-primary mt-0.5 shrink-0">✦</span>
+              <span>{idea}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="rounded-xl border-l-4 border-primary bg-primary/5 p-3 mb-4">
+        <div className="text-[10px] uppercase tracking-wide text-primary font-semibold mb-1">
+          Философия методики
+        </div>
+        <p className="text-sm italic text-foreground/80 leading-relaxed">
+          {author.philosophy}
+        </p>
+      </div>
+
+      <div className="rounded-lg bg-secondary/40 p-3 text-[11px] text-muted-foreground italic leading-relaxed">
+        <Shield className="h-3.5 w-3.5 inline-block mr-1 mb-0.5" />
+        {author.disclaimer}
       </div>
     </div>
   );

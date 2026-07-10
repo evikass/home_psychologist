@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/components/language-provider";
+import { StarsOverlay } from "@/components/stars-overlay";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -89,7 +90,10 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <LanguageProvider>{children}</LanguageProvider>
+          <LanguageProvider>
+            <StarsOverlay />
+            <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
+          </LanguageProvider>
         </ThemeProvider>
         <Sonner
           position="top-center"
