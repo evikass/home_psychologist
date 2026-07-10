@@ -4,6 +4,15 @@
       <stop offset="0%" stop-color="#fdf6f0"/>
       <stop offset="100%" stop-color="#f5e6d8"/>
     </radialGradient>
+    <radialGradient id="self-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2a1a3a"/>
+      <stop offset="100%" stop-color="#0a0a1a"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="50%" stop-color="#ca8a04"/>
+      <stop offset="100%" stop-color="#a16207"/>
+    </linearGradient>
     <radialGradient id="g-strong" cx="50%" cy="50%" r="80%">
       <stop offset="0%" stop-color="#dc2626"/>
       <stop offset="100%" stop-color="#fca5a5"/>
@@ -29,26 +38,61 @@
   <!-- Background circle -->
   <circle cx="32" cy="32" r="31" fill="url(#bg)"/>
 
-  <!-- 5 segments (бытийности) — радиальные pie slices -->
-  <!-- Сегмент 1: верх-право (УДОВНАЯ, зелёный, 30°) -->
+  <!-- 5 segments (бытийности) -->
   <path d="M 32 32 L 32 8 A 24 24 0 0 1 55.1 21.6 Z" fill="url(#g-pleasure)" opacity="0.9"/>
-  <!-- Сегмент 2: право (СИЛЬНАЯ, красный, 90°) -->
   <path d="M 32 32 L 55.1 21.6 A 24 24 0 0 1 53.4 46.6 Z" fill="url(#g-strong)" opacity="0.9"/>
-  <!-- Сегмент 3: низ-право (КОНТРОЛЁР, синий, 150°) -->
   <path d="M 32 32 L 53.4 46.6 A 24 24 0 0 1 32 56 Z" fill="url(#g-controller)" opacity="0.9"/>
-  <!-- Сегмент 4: низ-лево (ПРОМЕЖУТОЧНАЯ, золотой, 210°) -->
   <path d="M 32 32 L 32 56 A 24 24 0 0 1 10.6 46.6 Z" fill="url(#g-intermediate)" opacity="0.9"/>
-  <!-- Сегмент 5: лево-верх (РЕГУЛЯТОР, бирюзовый, 330°) -->
   <path d="M 32 32 L 10.6 46.6 A 24 24 0 0 1 19.1 11.6 Z" fill="url(#g-regulator)" opacity="0.9"/>
   <path d="M 32 32 L 19.1 11.6 A 24 24 0 0 1 32 8 Z" fill="url(#g-regulator)" opacity="0.9"/>
 
-  <!-- Внутренний круг-разделитель (золотая рамка) -->
-  <circle cx="32" cy="32" r="9" fill="none" stroke="#ca8a04" stroke-width="1" opacity="0.6"/>
+  <!-- Внешний золотой круг -->
+  <circle cx="32" cy="32" r="11" fill="none" stroke="url(#gold)" stroke-width="1" opacity="0.7"/>
 
-  <!-- Центральное «Я» -->
-  <circle cx="32" cy="32" r="8" fill="#1a1a1a"/>
+  <!-- Симметричные узоры — 8-конечная звезда (лепестки) -->
+  <g opacity="0.55">
+    <path d="M 32 24 Q 36 28 32 32 Q 28 28 32 24 Z" fill="none" stroke="url(#gold)" stroke-width="0.4"/>
+    <path d="M 32 40 Q 28 36 32 32 Q 36 36 32 40 Z" fill="none" stroke="url(#gold)" stroke-width="0.4"/>
+    <path d="M 24 32 Q 28 28 32 32 Q 28 36 24 32 Z" fill="none" stroke="url(#gold)" stroke-width="0.4"/>
+    <path d="M 40 32 Q 36 36 32 32 Q 36 28 40 32 Z" fill="none" stroke="url(#gold)" stroke-width="0.4"/>
+  </g>
+
+  <!-- Диагональные лепестки -->
+  <g opacity="0.45">
+    <path d="M 26.3 26.3 Q 32 28 32 32 Q 28 32 26.3 26.3 Z" fill="none" stroke="url(#gold)" stroke-width="0.35"/>
+    <path d="M 37.7 26.3 Q 36 32 32 32 Q 32 28 37.7 26.3 Z" fill="none" stroke="url(#gold)" stroke-width="0.35"/>
+    <path d="M 37.7 37.7 Q 32 36 32 32 Q 36 32 37.7 37.7 Z" fill="none" stroke="url(#gold)" stroke-width="0.35"/>
+    <path d="M 26.3 37.7 Q 28 32 32 32 Q 32 36 26.3 37.7 Z" fill="none" stroke="url(#gold)" stroke-width="0.35"/>
+  </g>
+
+  <!-- Концентрические окружности -->
+  <circle cx="32" cy="32" r="9" fill="none" stroke="url(#gold)" stroke-width="0.3" opacity="0.4"/>
+  <circle cx="32" cy="32" r="6" fill="none" stroke="url(#gold)" stroke-width="0.3" opacity="0.5" stroke-dasharray="1 1"/>
+
+  <!-- 8 точек-звёзд по внутреннему кругу -->
+  <g fill="url(#gold)" opacity="0.7">
+    <circle cx="32" cy="24" r="0.7"/>
+    <circle cx="37.7" cy="26.3" r="0.7"/>
+    <circle cx="40" cy="32" r="0.7"/>
+    <circle cx="37.7" cy="37.7" r="0.7"/>
+    <circle cx="32" cy="40" r="0.7"/>
+    <circle cx="26.3" cy="37.7" r="0.7"/>
+    <circle cx="24" cy="32" r="0.7"/>
+    <circle cx="26.3" cy="26.3" r="0.7"/>
+  </g>
+
+  <!-- Центральное «Я» — тёмный круг с градиентом -->
+  <circle cx="32" cy="32" r="8" fill="url(#self-grad)"/>
+
+  <!-- Внутренняя звезда Давида -->
+  <g opacity="0.3" fill="none" stroke="url(#gold)" stroke-width="0.3">
+    <polygon points="32,26 37.2,35 26.8,35"/>
+    <polygon points="32,38 26.8,29 37.2,29"/>
+  </g>
+
+  <!-- Буква «Я» -->
   <text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="serif" font-size="9" font-weight="700" fill="white">Я</text>
 
-  <!-- Внешний декоративный круг -->
+  <!-- Внешний декоративный круг с рунами -->
   <circle cx="32" cy="32" r="29" fill="none" stroke="#ca8a04" stroke-width="0.5" opacity="0.4" stroke-dasharray="1 2"/>
 </svg>

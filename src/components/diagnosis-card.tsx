@@ -25,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { LevelScale } from "@/components/level-scale";
 import { ConsciousnessGeometry } from "@/components/consciousness-geometry";
+import { TransformationChain } from "@/components/transformation-chain";
 import { PROCESSING_BY_TYPE } from "@/lib/masterkit-data";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
 import { useSpeech } from "@/hooks/use-speech";
@@ -48,6 +49,35 @@ const INTENSITY_LABEL: Record<string, string> = {
   средняя: "средняя",
   высокая: "высокая",
 };
+
+/**
+ * Маппинг бытийности → этап цепочки трансформации, где человек застрял.
+ *
+ * КОНТРОЛЁР → ДЕЙСТВИЯ (застрял в действиях, не может остановиться)
+ * СИЛЬНАЯ → ЭМОЦИИ (эмоция как топливо, но не прожита)
+ * УДОВНАЯ → ЭМОЦИИ (залип в чувствах)
+ * ПРОМЕЖУТОЧНАЯ → МЫСЛИ (вечный анализ без действия)
+ * РЕГУЛЯТОР → МЫСЛИ (постоянная настройка в голове)
+ * ЛЮБЯЩАЯ → ЭМОЦИИ (растворился в эмоциях другого)
+ * ТВОРЯЩАЯ → ДЕЙСТВИЯ (творит без завершения)
+ * ВОЛЯЩАЯ → ДЕЙСТВИЯ (выбрал, но не действует)
+ * НАБЛЮДАТЕЛЬ → МЫСЛИ (наблюдает, но не действует)
+ */
+function getStuckStage(beingnessId?: string | null): string | undefined {
+  if (!beingnessId) return undefined;
+  const map: Record<string, string> = {
+    controller: "actions",
+    strong: "emotions",
+    pleasure: "emotions",
+    intermediate: "thoughts",
+    regulator: "thoughts",
+    loving: "emotions",
+    creating: "actions",
+    willing: "actions",
+    witness: "thoughts",
+  };
+  return map[beingnessId] ?? undefined;
+}
 
 export function DiagnosisCard({
   data,
@@ -129,6 +159,24 @@ export function DiagnosisCard({
             </p>
           </div>
         </div>
+      </Block>
+
+      {/* 1.5. Цепочка трансформации — где человек застрял */}
+      <Block delay={0.03}>
+        <div className="flex items-center gap-2 mb-1">
+          <ArrowRight className="h-4 w-4 text-primary" />
+          <h3 className="font-display text-base sm:text-lg font-semibold">
+            Где в цепочке застряли
+          </h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Установки порождают эмоции → мысли → действия → результат.
+          Подсвечен этап, на котором сейчас зависли.
+        </p>
+        <TransformationChain
+          stuckAtId={getStuckStage(data.beingness?.id)}
+          compact={false}
+        />
       </Block>
 
       {/* 2. Уровень развития */}

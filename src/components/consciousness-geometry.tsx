@@ -432,18 +432,229 @@ export function ConsciousnessGeometry({
             opacity="0.6"
           />
 
-          {/* Центральное «Я» */}
+          {/* === Центральное «Я» с симметричными переливающимися узорами === */}
+          <defs>
+            {/* Переливающийся радиальный градиент для центра */}
+            <radialGradient id="self-gradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#2a1a3a">
+                <animate
+                  attributeName="stop-color"
+                  values="#2a1a3a;#4a2a5a;#2a1a3a"
+                  dur="6s"
+                  repeatCount="indefinite"
+                />
+              </stop>
+              <stop offset="50%" stopColor="#1a1a2a">
+                <animate
+                  attributeName="stop-color"
+                  values="#1a1a2a;#2a2a4a;#1a1a2a"
+                  dur="6s"
+                  repeatCount="indefinite"
+                />
+              </stop>
+              <stop offset="100%" stopColor="#0a0a1a" />
+            </radialGradient>
+
+            {/* Золотой градиент для узоров */}
+            <linearGradient id="gold-shimmer" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#fde68a">
+                <animate
+                  attributeName="stop-color"
+                  values="#fde68a;#ca8a04;#fde68a;#fbbf24;#fde68a"
+                  dur="8s"
+                  repeatCount="indefinite"
+                />
+              </stop>
+              <stop offset="50%" stopColor="#ca8a04">
+                <animate
+                  attributeName="stop-color"
+                  values="#ca8a04;#fbbf24;#ca8a04;#fde68a;#ca8a04"
+                  dur="8s"
+                  repeatCount="indefinite"
+                />
+              </stop>
+              <stop offset="100%" stopColor="#a16207">
+                <animate
+                  attributeName="stop-color"
+                  values="#a16207;#ca8a04;#a16207;#78350f;#a16207"
+                  dur="8s"
+                  repeatCount="indefinite"
+                />
+              </stop>
+            </linearGradient>
+
+            {/* Вращающийся узор-звезда */}
+            <pattern
+              id="mandala-pattern"
+              x="0"
+              y="0"
+              width="20"
+              height="20"
+              patternUnits="userSpaceOnUse"
+              patternTransform={`translate(${CENTER} ${CENTER})`}
+            >
+              <path
+                d="M 10 2 L 12 8 L 18 10 L 12 12 L 10 18 L 8 12 L 2 10 L 8 8 Z"
+                fill="url(#gold-shimmer)"
+                opacity="0.15"
+              />
+            </pattern>
+          </defs>
+
+          {/* Внешний переливающийся круг центра */}
           <motion.circle
             cx={CENTER}
             cy={CENTER}
             r={INNER_R - 4}
-            fill={BEINGNESSES[0].color.base}
+            fill="url(#self-gradient)"
             animate={{
               scale: activeId === "self" ? 1.08 : 1,
             }}
             transition={{ duration: 0.4 }}
             style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
           />
+
+          {/* Вращающиеся симметричные узоры — 8-конечная звезда */}
+          <motion.g
+            style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+          >
+            {Array.from({ length: 8 }).map((_, i) => {
+              const angle = (360 / 8) * i;
+              const rad = ((angle - 90) * Math.PI) / 180;
+              const r1 = INNER_R - 8;
+              const r2 = INNER_R - 18;
+              const r3 = INNER_R - 12;
+              const x1 = CENTER + r1 * Math.cos(rad);
+              const y1 = CENTER + r1 * Math.sin(rad);
+              const x2 = CENTER + r2 * Math.cos(rad);
+              const y2 = CENTER + r2 * Math.sin(rad);
+              // Промежуточная точка для создания «лепестка»
+              const midAngle = angle + 22.5;
+              const midRad = ((midAngle - 90) * Math.PI) / 180;
+              const mx = CENTER + r3 * Math.cos(midRad);
+              const my = CENTER + r3 * Math.sin(midRad);
+              return (
+                <path
+                  key={i}
+                  d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`}
+                  fill="none"
+                  stroke="url(#gold-shimmer)"
+                  strokeWidth="0.8"
+                  opacity="0.5"
+                />
+              );
+            })}
+          </motion.g>
+
+          {/* Внутренняя вращающаяся в обратную сторону звезда (8 лучей) */}
+          <motion.g
+            style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
+            animate={{ rotate: -360 }}
+            transition={{ duration: 90, repeat: Infinity, ease: "linear" }}
+          >
+            {Array.from({ length: 8 }).map((_, i) => {
+              const angle = (360 / 8) * i + 22.5;
+              const rad = ((angle - 90) * Math.PI) / 180;
+              const r1 = INNER_R - 14;
+              const r2 = INNER_R - 24;
+              const x1 = CENTER + r1 * Math.cos(rad);
+              const y1 = CENTER + r1 * Math.sin(rad);
+              const x2 = CENTER + r2 * Math.cos(rad);
+              const y2 = CENTER + r2 * Math.sin(rad);
+              return (
+                <line
+                  key={i}
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="url(#gold-shimmer)"
+                  strokeWidth="0.5"
+                  opacity="0.4"
+                />
+              );
+            })}
+          </motion.g>
+
+          {/* Концентрические окружности — символ слоёв сознания */}
+          {[INNER_R - 8, INNER_R - 14, INNER_R - 20].map((r, i) => (
+            <circle
+              key={i}
+              cx={CENTER}
+              cy={CENTER}
+              r={r}
+              fill="none"
+              stroke="url(#gold-shimmer)"
+              strokeWidth="0.4"
+              opacity={0.35 - i * 0.08}
+              strokeDasharray={i === 1 ? "1 2" : undefined}
+            />
+          ))}
+
+          {/* 12 симметричных точек-звёзд по внутреннему кругу */}
+          {Array.from({ length: 12 }).map((_, i) => {
+            const a = (360 / 12) * i;
+            const pos = polar(a, INNER_R - 10);
+            return (
+              <motion.circle
+                key={i}
+                cx={pos.x}
+                cy={pos.y}
+                r="1.5"
+                fill="url(#gold-shimmer)"
+                animate={{
+                  opacity: [0.3, 0.9, 0.3],
+                  scale: [1, 1.4, 1],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  delay: (i * 0.25) % 3,
+                  ease: "easeInOut",
+                }}
+                style={{ transformOrigin: `${pos.x}px ${pos.y}px` }}
+              />
+            );
+          })}
+
+          {/* 6-конечная звезда Давида (два треугольника) — сакральная геометрия */}
+          <motion.g
+            style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 120, repeat: Infinity, ease: "linear" }}
+            opacity="0.25"
+          >
+            <polygon
+              points={(() => {
+                const r = INNER_R - 16;
+                return Array.from({ length: 3 })
+                  .map((_, i) => {
+                    const a = (120 * i - 90) * (Math.PI / 180);
+                    return `${CENTER + r * Math.cos(a)},${CENTER + r * Math.sin(a)}`;
+                  })
+                  .join(" ");
+              })()}
+              fill="none"
+              stroke="url(#gold-shimmer)"
+              strokeWidth="0.6"
+            />
+            <polygon
+              points={(() => {
+                const r = INNER_R - 16;
+                return Array.from({ length: 3 })
+                  .map((_, i) => {
+                    const a = (120 * i + 90) * (Math.PI / 180);
+                    return `${CENTER + r * Math.cos(a)},${CENTER + r * Math.sin(a)}`;
+                  })
+                  .join(" ");
+              })()}
+              fill="none"
+              stroke="url(#gold-shimmer)"
+              strokeWidth="0.6"
+            />
+          </motion.g>
 
           {/* Дыхательная аура вокруг «Я» */}
           <motion.circle
@@ -464,18 +675,18 @@ export function ConsciousnessGeometry({
             }}
           />
 
-          {/* Орнаментальные точки вокруг «Я» */}
-          {Array.from({ length: 12 }).map((_, i) => {
-            const a = (360 / 12) * i;
-            const pos = polar(a, INNER_R - 12);
+          {/* Орнаментальные точки вокруг «Я» — внешний ряд */}
+          {Array.from({ length: 24 }).map((_, i) => {
+            const a = (360 / 24) * i;
+            const pos = polar(a, INNER_R - 5);
             return (
               <circle
                 key={i}
                 cx={pos.x}
                 cy={pos.y}
-                r="1.2"
-                fill="#ca8a04"
-                opacity="0.5"
+                r="0.8"
+                fill="url(#gold-shimmer)"
+                opacity="0.4"
               />
             );
           })}
