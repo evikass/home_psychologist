@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/components/language-provider";
+import { RoleProvider } from "@/components/role-provider";
 import { StarsOverlay } from "@/components/stars-overlay";
 
 const inter = Inter({
@@ -96,8 +97,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <LanguageProvider>
-            <StarsOverlay />
-            <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
+            <RoleProvider>
+              <StarsOverlay />
+              <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
+            </RoleProvider>
           </LanguageProvider>
         </ThemeProvider>
         <Sonner

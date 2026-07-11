@@ -16,6 +16,7 @@ import {
   Send,
   Sparkles,
   TriangleAlert,
+  User,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,8 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { useI18n } from "@/components/language-provider";
 import { ConsultantModal } from "@/components/consultant-modal";
 import { ClientsPanel } from "@/components/clients-panel";
+import { RolePanel } from "@/components/role-panel";
+import { useRole } from "@/components/role-provider";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
 import type { NeuroDiagnosis } from "@/lib/diagnosis-types";
@@ -95,6 +98,7 @@ export default function Home() {
   const [consultantOpen, setConsultantOpen] = useState(false);
   const [neuroOpen, setNeuroOpen] = useState(false);
   const [clientsOpen, setClientsOpen] = useState(false);
+  const [rolePanelOpen, setRolePanelOpen] = useState(false);
   const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro" | "tale" | "card">("standard");
   const [neuroResult, setNeuroResult] = useState<NeuroDiagnosis | null>(null);
   const [taleResult, setTaleResult] = useState<TaleDiagnosis | null>(null);
@@ -110,6 +114,8 @@ export default function Home() {
   } = useDiagnosisHistory();
   const { showOnboarding, setShowOnboarding, showAgain } = useOnboarding();
   const { t, lang } = useI18n();
+  const { isPsychologist, isAdmin, profile } = useRole();
+  const canSeeClients = (isPsychologist && profile?.approved) || isAdmin;
 
   const handleSubmit = async () => {
     if (text.trim().length < 20) {
@@ -292,6 +298,8 @@ export default function Home() {
         onShowOnboarding={showAgain}
         onOpenNeuro={() => setNeuroOpen(true)}
         onOpenClients={() => setClientsOpen(true)}
+        onOpenProfile={() => setRolePanelOpen(true)}
+        canSeeClients={canSeeClients}
       />
 
       <OnboardingModal open={showOnboarding} onOpenChange={setShowOnboarding} />
@@ -795,6 +803,8 @@ export default function Home() {
 
       <ClientsPanel open={clientsOpen} onOpenChange={setClientsOpen} />
 
+      <RolePanel open={rolePanelOpen} onOpenChange={setRolePanelOpen} />
+
       <NeurotransformingPanel open={neuroOpen} onOpenChange={setNeuroOpen} />
 
       <Footer onConsultant={() => setConsultantOpen(true)} />
@@ -809,6 +819,8 @@ function Header({
   onShowOnboarding,
   onOpenNeuro,
   onOpenClients,
+  onOpenProfile,
+  canSeeClients,
 }: {
   historyCount: number;
   onOpenHistory: () => void;
@@ -816,6 +828,8 @@ function Header({
   onShowOnboarding: () => void;
   onOpenNeuro: () => void;
   onOpenClients: () => void;
+  onOpenProfile: () => void;
+  canSeeClients: boolean;
 }) {
   return (
     <header className="sticky top-0 z-30 backdrop-blur-md bg-background/80 border-b safe-top">
@@ -869,12 +883,23 @@ function Header({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onOpenClients}
+            onClick={onOpenProfile}
             className="h-8 w-8 p-0"
-            title="Клиенты"
+            title="Профиль"
           >
-            <Users className="h-3.5 w-3.5" />
+            <User className="h-3.5 w-3.5" />
           </Button>
+          {canSeeClients && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenClients}
+              className="h-8 w-8 p-0"
+              title="Клиенты"
+            >
+              <Users className="h-3.5 w-3.5" />
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
