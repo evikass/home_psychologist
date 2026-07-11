@@ -364,7 +364,7 @@ function PsychologistApplyForm({
 
 // === Секретный вход администратора ===
 // Пароль хранится в env ADMIN_PASSWORD, по умолчанию "masterkit2026"
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "masterkit2026";
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "jenuari11";
 
 function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [showField, setShowField] = useState(false);
