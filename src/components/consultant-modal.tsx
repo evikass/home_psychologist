@@ -404,7 +404,7 @@ ${situation}
 Для официальной работы с методикой обращайтесь к сертифицированным наставникам
 через удобный канал связи.`;
 
-    // Скачивание файла
+    // Скачивание файла (для архива)
     const blob = new Blob([requestText], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -416,20 +416,41 @@ ${situation}
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast.success("Заявка сформирована! Файл скачан — отправьте его наставнику через любой удобный канал.");
+    // Отправка заявки админу на email через mailto
+    const subject = encodeURIComponent(
+      `Заявка на консультацию — ${name} (${tier?.name ?? format})`
+    );
+    const body = encodeURIComponent(requestText);
+    const adminEmail = "evi-kass@mail.ru";
+
+    // Открываем почтовый клиент с предзаполненным письмом
+    window.location.href = `mailto:${adminEmail}?subject=${subject}&body=${body}`;
+
+    toast.success(
+      "Заявка сформирована! Файл скачан, откроется почта — отправьте письмо администратору. " +
+      "Также можно отправить вручную на " + adminEmail + " или через VK.",
+      { duration: 8000 }
+    );
   };
 
   return (
     <div className="space-y-4">
       <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 p-3 text-xs leading-relaxed">
         <div className="font-semibold text-blue-900 dark:text-blue-200 mb-1">
-          📋 Заполните заявку — наставник свяжется с вами
+          📋 Заполните заявку — администратор свяжется с вами
         </div>
         <p className="text-blue-800/80 dark:text-blue-300/80">
-          После заполнения формы заявка скачается как текстовый файл.
-          Вы сможете отправить его любому сертифицированному наставнику методики
-          через удобный канал (email, Telegram, WhatsApp).
+          После заполнения формы откроется почтовый клиент с готовым письмом
+          на адрес администратора <strong>evi-kass@mail.ru</strong>.
+          Просто нажмите «Отправить» — администратор получит заявку и свяжется
+          с вами для подбора подходящего наставника.
         </p>
+        <div className="mt-2 text-blue-700/70 dark:text-blue-400/70">
+          Также можно связаться напрямую:{" "}
+          <a href="https://vk.ru/evgeniikassin" target="_blank" rel="noopener noreferrer" className="underline">
+            VK: vk.ru/evgeniikassin
+          </a>
+        </div>
       </div>
 
       <div className="space-y-3">
