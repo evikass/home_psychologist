@@ -16,6 +16,7 @@ import {
   Send,
   Sparkles,
   TriangleAlert,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +39,7 @@ import { VoiceInput } from "@/components/voice-input";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useI18n } from "@/components/language-provider";
 import { ConsultantModal } from "@/components/consultant-modal";
+import { ClientsPanel } from "@/components/clients-panel";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
 import type { NeuroDiagnosis } from "@/lib/diagnosis-types";
@@ -92,6 +94,7 @@ export default function Home() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [consultantOpen, setConsultantOpen] = useState(false);
   const [neuroOpen, setNeuroOpen] = useState(false);
+  const [clientsOpen, setClientsOpen] = useState(false);
   const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro" | "tale" | "card">("standard");
   const [neuroResult, setNeuroResult] = useState<NeuroDiagnosis | null>(null);
   const [taleResult, setTaleResult] = useState<TaleDiagnosis | null>(null);
@@ -288,6 +291,7 @@ export default function Home() {
         onOpenAnalytics={() => setAnalyticsOpen(true)}
         onShowOnboarding={showAgain}
         onOpenNeuro={() => setNeuroOpen(true)}
+        onOpenClients={() => setClientsOpen(true)}
       />
 
       <OnboardingModal open={showOnboarding} onOpenChange={setShowOnboarding} />
@@ -789,6 +793,8 @@ export default function Home() {
 
       <ConsultantModal open={consultantOpen} onOpenChange={setConsultantOpen} />
 
+      <ClientsPanel open={clientsOpen} onOpenChange={setClientsOpen} />
+
       <NeurotransformingPanel open={neuroOpen} onOpenChange={setNeuroOpen} />
 
       <Footer onConsultant={() => setConsultantOpen(true)} />
@@ -802,12 +808,14 @@ function Header({
   onOpenAnalytics,
   onShowOnboarding,
   onOpenNeuro,
+  onOpenClients,
 }: {
   historyCount: number;
   onOpenHistory: () => void;
   onOpenAnalytics: () => void;
   onShowOnboarding: () => void;
   onOpenNeuro: () => void;
+  onOpenClients: () => void;
 }) {
   return (
     <header className="sticky top-0 z-30 backdrop-blur-md bg-background/80 border-b safe-top">
@@ -857,6 +865,15 @@ function Header({
           >
             <Brain className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Нейро</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onOpenClients}
+            className="h-8 w-8 p-0"
+            title="Клиенты"
+          >
+            <Users className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="outline"

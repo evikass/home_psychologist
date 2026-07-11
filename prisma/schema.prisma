@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -29,4 +26,37 @@ model Post {
   authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// === CRM для психолога/наставника ===
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String?
+  email       String?
+  notes       String?
+  status      String   @default("active") // active | paused | finished
+  tags        String?  // через запятую: "тревога,отношения"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  sessions    Session[]
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  date        DateTime @default(now())
+  mode        String   // standard | neuro | tale | card
+  summary     String?  // краткое содержание сессии
+  situation   String?  // исходный текст клиента
+  levelId     Int?     // уровень развития (1-7)
+  beingnessId String?  // бытийность
+  emotionIds  String?  // через запятую
+  pitId       String?  // эмоциональная яма
+  nextStep    String?  // следующий шаг
+  duration    Int?     // длительность в минутах
+  notes       String?  // заметки наставника
+  createdAt   DateTime @default(now())
 }
