@@ -123,8 +123,8 @@ export function RolePanel({
       return;
     }
 
-    // Проверка админ-пароля
-    if (loginPassword === ADMIN_PASSWORD) {
+    // Проверка админа — имя + пароль
+    if (loginName.trim().toLowerCase() === "evikass" && loginPassword === ADMIN_PASSWORD) {
       setProfile({
         role: "admin",
         name: "Администратор",
