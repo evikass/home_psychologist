@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import type { TaleDiagnosis } from "@/app/api/tale-diagnose/route";
+import type { TaleDiagnosis } from "@/lib/diagnosis-types";
 
 const TYPE_ICONS: Record<string, typeof BookOpen> = {
   сказка: BookOpen,

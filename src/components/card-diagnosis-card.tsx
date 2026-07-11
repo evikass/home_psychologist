@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MetaphorCardImage } from "@/components/metaphor-card-image";
-import type { CardDiagnosis } from "@/app/api/card-diagnose/route";
+import type { CardDiagnosis } from "@/lib/diagnosis-types";
 
 export function CardDiagnosisCard({ data }: { data: CardDiagnosis }) {
   return (

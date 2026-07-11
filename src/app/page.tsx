@@ -40,11 +40,11 @@ import { useI18n } from "@/components/language-provider";
 import { ConsultantModal } from "@/components/consultant-modal";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
-import type { NeuroDiagnosis } from "@/app/api/neuro-diagnose/route";
+import type { NeuroDiagnosis } from "@/lib/diagnosis-types";
 import { TaleDiagnosisCard } from "@/components/tale-diagnosis-card";
-import type { TaleDiagnosis } from "@/app/api/tale-diagnose/route";
+import type { TaleDiagnosis } from "@/lib/diagnosis-types";
 import { CardDiagnosisCard } from "@/components/card-diagnosis-card";
-import type { CardDiagnosis } from "@/app/api/card-diagnose/route";
+import type { CardDiagnosis } from "@/lib/diagnosis-types";
 import {
   useDiagnosisHistory,
   type HistoryEntry,

@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MIPS_LEVELS, BRAINWAVE_STATES } from "@/lib/neurotransforming-data";
-import type { NeuroDiagnosis } from "@/app/api/neuro-diagnose/route";
+import type { NeuroDiagnosis } from "@/lib/diagnosis-types";
 import {
   MipsMiniDiagram,
   BrainwaveMiniBar,
