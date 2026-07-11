@@ -64,14 +64,19 @@ export function VoiceInput({
 
       const recognition = new SR();
       recognition.lang = "ru-RU";
-      recognition.continuous = true;
-      recognition.interimResults = true;
+      recognition.continuous = false;
+      recognition.interimResults = false;
 
+      // Для continuous=false — onresult вызывается один раз с финальным результатом
       recognition.onresult = (event: any) => {
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        let text = "";
+        for (let i = 0; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
-            finalTextRef.current += event.results[i][0].transcript;
+            text += event.results[i][0].transcript;
           }
+        }
+        if (text.trim()) {
+          finalTextRef.current = text.trim();
         }
       };
 
