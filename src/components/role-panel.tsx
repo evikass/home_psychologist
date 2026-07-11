@@ -26,6 +26,8 @@ import {
 import { useRole, ADMIN_EMAIL, ADMIN_VK } from "@/components/role-provider";
 import { toast } from "sonner";
 
+type ProfileTab = "guest" | "user" | "psychologist";
+
 export function RolePanel({
   open,
   onOpenChange,
@@ -35,6 +37,32 @@ export function RolePanel({
 }) {
   const { profile, role, isPsychologist, isAdmin, logout, applyAsPsychologist, setProfile } = useRole();
   const [showApplyForm, setShowApplyForm] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+
+  // Текущая вкладка определяется ролью
+  const currentTab: ProfileTab =
+    role === "psychologist" ? "psychologist" : role === "user" ? "user" : "guest";
+
+  const switchTab = (tab: ProfileTab) => {
+    if (tab === "guest") {
+      logout();
+      toast.info("Вы переключились в режим гостя.");
+    } else if (tab === "user") {
+      setProfile({
+        role: "user",
+        name: profile?.name || "Пользователь",
+        email: profile?.email || "",
+      });
+      toast.info("Вы переключились в режим пользователя.");
+    } else if (tab === "psychologist") {
+      if (profile?.role === "psychologist") {
+        // Уже психолог — ничего не делаем
+        return;
+      }
+      // Показываем форму регистрации
+      setShowApplyForm(true);
+    }
+  };
 
   const onAdminLogin = () => {
     setProfile({
@@ -44,6 +72,7 @@ export function RolePanel({
       approved: true,
     });
     toast.success("Вход выполнен. Режим администратора активирован.");
+    setShowAdminLogin(false);
     onOpenChange(false);
   };
 
@@ -57,196 +86,70 @@ export function RolePanel({
           </DialogTitle>
         </DialogHeader>
 
-        {!profile ? (
-          /* === Гость — обычный пользователь === */
-          <div className="space-y-4">
-            <div className="rounded-lg bg-secondary/40 p-4 text-center">
-              <User className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium">Вы вошли как гость</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Обычный пользователь: диагнозы, история, аналитика
-              </p>
-            </div>
+        {/* Вкладки ролей */}
+        <div className="grid grid-cols-3 gap-1 p-1 bg-secondary/50 rounded-lg">
+          <RoleTabButton
+            active={currentTab === "guest"}
+            onClick={() => switchTab("guest")}
+            icon={User}
+            label="Гость"
+          />
+          <RoleTabButton
+            active={currentTab === "user"}
+            onClick={() => switchTab("user")}
+            icon={Check}
+            label="Пользователь"
+          />
+          <RoleTabButton
+            active={currentTab === "psychologist"}
+            onClick={() => switchTab("psychologist")}
+            icon={Award}
+            label="Психолог"
+          />
+        </div>
 
-            <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Award className="h-4 w-4 text-primary" />
-                <h4 className="font-display font-semibold text-sm">
-                  Вы практикующий психолог?
-                </h4>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-                Зарегистрируйтесь как психолог — откроется CRM для клиентов,
-                история сессий, расширенная аналитика.
-                Заявка отправляется администратору на одобрение.
-              </p>
-              <Button
-                size="sm"
-                className="w-full"
-                onClick={() => setShowApplyForm(true)}
-              >
-                <Award className="h-4 w-4" />
-                Стать психологом
-              </Button>
-            </div>
-
-            <div className="text-xs text-muted-foreground text-center">
-              Администратор:{" "}
-              <a href={`mailto:${ADMIN_EMAIL}`} className="text-primary hover:underline">
-                {ADMIN_EMAIL}
-              </a>
-              {" · "}
-              <a href={ADMIN_VK} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                VK
-              </a>
-            </div>
-
-            {/* Секретный вход админа */}
-            <AdminLogin onLogin={onAdminLogin} />
-          </div>
-        ) : (
-          /* === Зарегистрированный пользователь === */
-          <div className="space-y-4">
-            {/* Информация о профиле */}
-            <div className="rounded-lg border bg-card p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  {isAdmin ? <Shield className="h-5 w-5" /> : isPsychologist ? <Award className="h-5 w-5" /> : <User className="h-5 w-5" />}
-                </div>
-                <div>
-                  <div className="font-semibold text-sm">{profile.name || "Без имени"}</div>
-                  <div className="text-xs text-muted-foreground">{profile.email}</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge
-                  variant={isAdmin ? "default" : "secondary"}
-                  className="text-xs"
-                >
-                  {role === "admin" ? "Администратор" : role === "psychologist" ? "Психолог" : "Пользователь"}
-                </Badge>
-                {role === "psychologist" && (
-                  <Badge
-                    variant="outline"
-                    className={`text-xs ${
-                      profile.approved
-                        ? "border-green-400 text-green-700 bg-green-50"
-                        : "border-amber-400 text-amber-700 bg-amber-50"
-                    }`}
-                  >
-                    {profile.approved ? (
-                      <><Check className="h-3 w-3 mr-0.5" /> одобрен</>
-                    ) : (
-                      <><Clock className="h-3 w-3 mr-0.5" /> ожидает одобрения</>
-                    )}
-                  </Badge>
-                )}
-              </div>
-
-              {profile.specialization && (
-                <div className="mt-2 text-xs text-muted-foreground">
-                  <span className="font-medium">Специализация:</span> {profile.specialization}
-                </div>
-              )}
-              {profile.experience && (
-                <div className="text-xs text-muted-foreground">
-                  <span className="font-medium">Опыт:</span> {profile.experience}
-                </div>
-              )}
-            </div>
-
-            {/* Статус ожидания */}
-            {role === "psychologist" && !profile.approved && (
-              <div className="rounded-lg border-2 border-amber-300/50 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs leading-relaxed">
-                <Clock className="h-4 w-4 inline mr-1 text-amber-600" />
-                <strong>Заявка отправлена.</strong> Ожидает одобрения администратором.
-                Функционал психолога (CRM клиентов) будет доступен после одобрения.
-                <div className="mt-2">
-                  Статус заявки можно уточнить у администратора:
-                  <br />
-                  <a href={`mailto:${ADMIN_EMAIL}`} className="text-primary hover:underline">
-                    {ADMIN_EMAIL}
-                  </a>
-                  {" · "}
-                  <a href={ADMIN_VK} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    VK
-                  </a>
-                </div>
-              </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentTab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            {currentTab === "guest" && (
+              <GuestTab
+                onBecomeUser={() => switchTab("user")}
+                onBecomePsychologist={() => switchTab("psychologist")}
+                onShowAdmin={() => setShowAdminLogin(true)}
+              />
             )}
+            {currentTab === "user" && (
+              <UserTab profile={profile} onLogout={logout} onBecomePsychologist={() => switchTab("psychologist")} />
+            )}
+            {currentTab === "psychologist" && (
+              <PsychologistTab
+                profile={profile}
+                isAdmin={isAdmin}
+                onLogout={logout}
+                onShowApplyForm={() => setShowApplyForm(true)}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
 
-            {/* Функционал по ролям */}
-            <div className="rounded-lg bg-secondary/40 p-3">
-              <div className="text-xs uppercase tracking-wide font-semibold text-muted-foreground mb-2">
-                Доступный функционал
-              </div>
-              <ul className="space-y-1.5 text-xs">
-                <li className="flex items-center gap-1.5">
-                  <Check className="h-3 w-3 text-green-500" />
-                  4 режима диагноза (стандарт, нейро, сказки, карты)
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <Check className="h-3 w-3 text-green-500" />
-                  История диагнозов и аналитика
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <Check className="h-3 w-3 text-green-500" />
-                  AI-консультант и конcультант-заявка
-                </li>
-                {(isPsychologist && profile.approved) || isAdmin ? (
-                  <>
-                    <li className="flex items-center gap-1.5">
-                      <Check className="h-3 w-3 text-green-500" />
-                      CRM клиентов и история сессий
-                    </li>
-                    <li className="flex items-center gap-1.5">
-                      <Check className="h-3 w-3 text-green-500" />
-                      Привязка диагнозов к клиентам
-                    </li>
-                  </>
-                ) : (
-                  <li className="flex items-center gap-1.5 text-muted-foreground">
-                    <X className="h-3 w-3 text-muted-foreground/50" />
-                    CRM клиентов (только для психологов)
-                  </li>
-                )}
-                {isAdmin && (
-                  <li className="flex items-center gap-1.5">
-                    <Check className="h-3 w-3 text-green-500" />
-                    Управление заявками психологов
-                  </li>
-                )}
-              </ul>
-            </div>
-
-            {/* Кнопки */}
-            <div className="flex gap-2">
-              {!isPsychologist && !isAdmin && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setShowApplyForm(true)}
-                >
-                  <Award className="h-3.5 w-3.5" />
-                  Стать психологом
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-destructive"
-                onClick={() => {
-                  logout();
-                  toast.info("Вы вышли из профиля.");
-                  onOpenChange(false);
-                }}
-              >
-                Выйти
-              </Button>
+        {/* Админ-бар (если админ) */}
+        {isAdmin && (
+          <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-2 text-xs">
+            <div className="flex items-center gap-1.5 text-primary font-semibold">
+              <Shield className="h-3.5 w-3.5" />
+              Режим администратора активен
             </div>
           </div>
+        )}
+
+        {/* Секретный вход админа */}
+        {showAdminLogin && (
+          <AdminLogin onLogin={onAdminLogin} onCancel={() => setShowAdminLogin(false)} />
         )}
       </DialogContent>
 
@@ -260,6 +163,265 @@ export function RolePanel({
   );
 }
 
+// === Кнопка вкладки ===
+function RoleTabButton({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof User;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col items-center gap-1 py-2 rounded-md text-xs transition-all ${
+        active
+          ? "bg-background shadow-sm text-primary font-semibold"
+          : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </button>
+  );
+}
+
+// === Вкладка: Гость ===
+function GuestTab({
+  onBecomeUser,
+  onBecomePsychologist,
+  onShowAdmin,
+}: {
+  onBecomeUser: () => void;
+  onBecomePsychologist: () => void;
+  onShowAdmin: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg bg-secondary/40 p-4 text-center">
+        <User className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
+        <p className="text-sm font-medium">Режим гостя</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Диагнозы, история, аналитика — без регистрации
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Button size="sm" variant="outline" className="w-full" onClick={onBecomeUser}>
+          <Check className="h-4 w-4" />
+          Войти как пользователь
+        </Button>
+
+        <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-3">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Award className="h-4 w-4 text-primary" />
+            <span className="font-display font-semibold text-sm">Вы психолог?</span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+            Зарегистрируйтесь — откроется CRM клиентов и история сессий
+          </p>
+          <Button size="sm" className="w-full" onClick={onBecomePsychologist}>
+            <Award className="h-4 w-4" />
+            Стать психологом
+          </Button>
+        </div>
+      </div>
+
+      <div className="text-center pt-1">
+        <button
+          type="button"
+          onClick={onShowAdmin}
+          className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+        >
+          Вход для администратора
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// === Вкладка: Пользователь ===
+function UserTab({
+  profile,
+  onLogout,
+  onBecomePsychologist,
+}: {
+  profile: { name: string; email: string } | null;
+  onLogout: () => void;
+  onBecomePsychologist: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Check className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="font-semibold text-sm">{profile?.name || "Пользователь"}</div>
+            <div className="text-xs text-muted-foreground">{profile?.email || "без email"}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-lg bg-secondary/40 p-3">
+        <div className="text-xs uppercase tracking-wide font-semibold text-muted-foreground mb-2">
+          Доступно
+        </div>
+        <ul className="space-y-1 text-xs">
+          <li className="flex items-center gap-1.5">
+            <Check className="h-3 w-3 text-green-500" />
+            4 режима диагноза
+          </li>
+          <li className="flex items-center gap-1.5">
+            <Check className="h-3 w-3 text-green-500" />
+            История и аналитика
+          </li>
+          <li className="flex items-center gap-1.5">
+            <Check className="h-3 w-3 text-green-500" />
+            AI-консультант
+          </li>
+          <li className="flex items-center gap-1.5 text-muted-foreground">
+            <X className="h-3 w-3" />
+            CRM клиентов (только для психологов)
+          </li>
+        </ul>
+      </div>
+
+      <Button size="sm" variant="outline" className="w-full" onClick={onBecomePsychologist}>
+        <Award className="h-3.5 w-3.5" />
+        Стать психологом
+      </Button>
+
+      <Button size="sm" variant="ghost" className="w-full text-destructive" onClick={onLogout}>
+        Выйти в режим гостя
+      </Button>
+    </div>
+  );
+}
+
+// === Вкладка: Психолог ===
+function PsychologistTab({
+  profile,
+  isAdmin,
+  onLogout,
+  onShowApplyForm,
+}: {
+  profile: { name: string; email: string; specialization?: string; experience?: string; approved?: boolean } | null;
+  isAdmin: boolean;
+  onLogout: () => void;
+  onShowApplyForm: () => void;
+}) {
+  if (!profile || (profile.role !== "psychologist" && !isAdmin)) {
+    // Не зарегистрирован как психолог — показываем CTA
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg bg-secondary/40 p-4 text-center">
+          <Award className="h-10 w-10 mx-auto mb-2 text-primary" />
+          <p className="text-sm font-medium">Регистрация психолога</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Заполните заявку — администратор одобрит и откроет CRM
+          </p>
+        </div>
+        <Button size="sm" className="w-full" onClick={onShowApplyForm}>
+          <Send className="h-4 w-4" />
+          Заполнить заявку
+        </Button>
+        <div className="text-xs text-muted-foreground text-center">
+          Связь с админом:{" "}
+          <a href={`mailto:${ADMIN_EMAIL}`} className="text-primary hover:underline">{ADMIN_EMAIL}</a>
+          {" · "}
+          <a href={ADMIN_VK} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">VK</a>
+        </div>
+      </div>
+    );
+  }
+
+  const approved = profile.approved || isAdmin;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+            {isAdmin ? <Shield className="h-5 w-5" /> : <Award className="h-5 w-5" />}
+          </div>
+          <div>
+            <div className="font-semibold text-sm">{profile.name}</div>
+            <div className="text-xs text-muted-foreground">{profile.email}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="text-xs">
+            {isAdmin ? "Администратор" : "Психолог"}
+          </Badge>
+          <Badge
+            variant="outline"
+            className={`text-xs ${approved ? "border-green-400 text-green-700 bg-green-50" : "border-amber-400 text-amber-700 bg-amber-50"}`}
+          >
+            {approved ? <><Check className="h-3 w-3 mr-0.5" /> одобрен</> : <><Clock className="h-3 w-3 mr-0.5" /> ожидает</>}
+          </Badge>
+        </div>
+        {profile.specialization && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            <span className="font-medium">Специализация:</span> {profile.specialization}
+          </div>
+        )}
+      </div>
+
+      {approved ? (
+        <div className="rounded-lg bg-secondary/40 p-3">
+          <div className="text-xs uppercase tracking-wide font-semibold text-muted-foreground mb-2">
+            Доступно
+          </div>
+          <ul className="space-y-1 text-xs">
+            <li className="flex items-center gap-1.5">
+              <Check className="h-3 w-3 text-green-500" />
+              Всё из режима пользователя
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Check className="h-3 w-3 text-green-500" />
+              CRM клиентов и история сессий
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Check className="h-3 w-3 text-green-500" />
+              Привязка диагнозов к клиентам
+            </li>
+            {isAdmin && (
+              <li className="flex items-center gap-1.5">
+                <Check className="h-3 w-3 text-green-500" />
+                Управление заявками
+              </li>
+            )}
+          </ul>
+        </div>
+      ) : (
+        <div className="rounded-lg border-2 border-amber-300/50 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs leading-relaxed">
+          <Clock className="h-4 w-4 inline mr-1 text-amber-600" />
+          <strong>Заявка отправлена.</strong> Ожидает одобрения администратора.
+          CRM будет доступна после одобрения.
+          <div className="mt-2">
+            Связь:{" "}
+            <a href={`mailto:${ADMIN_EMAIL}`} className="text-primary hover:underline">{ADMIN_EMAIL}</a>
+            {" · "}
+            <a href={ADMIN_VK} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">VK</a>
+          </div>
+        </div>
+      )}
+
+      <Button size="sm" variant="ghost" className="w-full text-destructive" onClick={onLogout}>
+        Выйти
+      </Button>
+    </div>
+  );
+}
+
+// === Форма регистрации психолога ===
 function PsychologistApplyForm({
   open,
   onOpenChange,
@@ -285,10 +447,7 @@ function PsychologistApplyForm({
       return;
     }
     onSubmit({ name, email, specialization, experience });
-    toast.success(
-      "Заявка отправлена администратору! Откроется почтовый клиент — отправьте письмо для подтверждения.",
-      { duration: 8000 }
-    );
+    toast.success("Заявка отправлена! Откроется почта — отправьте письмо для подтверждения.", { duration: 8000 });
     onOpenChange(false);
   };
 
@@ -301,16 +460,13 @@ function PsychologistApplyForm({
             Регистрация психолога
           </DialogTitle>
         </DialogHeader>
-
         <div className="space-y-3">
           <div className="rounded-lg bg-primary/5 border border-primary/15 p-3 text-xs leading-relaxed">
-            После заполнения формы заявка отправится администратору на{" "}
-            <strong>{ADMIN_EMAIL}</strong>. После одобрения откроется CRM
-            для ведения клиентов.
+            Заявка отправится администратору на <strong>{ADMIN_EMAIL}</strong>.
+            После одобрения откроется CRM клиентов.
           </div>
-
           <div>
-            <label className="block text-sm font-medium mb-1">Ваше имя *</label>
+            <label className="block text-sm font-medium mb-1">Имя *</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя Фамилия" />
           </div>
           <div>
@@ -319,41 +475,17 @@ function PsychologistApplyForm({
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Специализация *</label>
-            <Input
-              value={specialization}
-              onChange={(e) => setSpecialization(e.target.value)}
-              placeholder="КПТ, гештальт, нейротрансформинг..."
-            />
+            <Input value={specialization} onChange={(e) => setSpecialization(e.target.value)} placeholder="КПТ, гештальт, нейротрансформинг..." />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Опыт работы</label>
-            <Textarea
-              value={experience}
-              onChange={(e) => setExperience(e.target.value)}
-              placeholder="Опишите ваш опыт, образование, сертификаты..."
-              className="min-h-[80px]"
-            />
+            <Textarea value={experience} onChange={(e) => setExperience(e.target.value)} placeholder="Опыт, образование, сертификаты..." className="min-h-[80px]" />
           </div>
-
-          <div className="text-xs text-muted-foreground">
-            Связь с администратором:
-            <br />
-            <a href={`mailto:${ADMIN_EMAIL}`} className="text-primary hover:underline">
-              {ADMIN_EMAIL}
-            </a>
-            {" · "}
-            <a href={ADMIN_VK} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              VK
-            </a>
-          </div>
-
           <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-              Отмена
-            </Button>
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Отмена</Button>
             <Button className="flex-1" onClick={handleSubmit}>
               <Send className="h-4 w-4" />
-              Отправить заявку
+              Отправить
             </Button>
           </div>
         </div>
@@ -363,11 +495,9 @@ function PsychologistApplyForm({
 }
 
 // === Секретный вход администратора ===
-// Пароль хранится в env ADMIN_PASSWORD, по умолчанию "masterkit2026"
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "jenuari11";
 
-function AdminLogin({ onLogin }: { onLogin: () => void }) {
-  const [showField, setShowField] = useState(false);
+function AdminLogin({ onLogin, onCancel }: { onLogin: () => void; onCancel: () => void }) {
   const [password, setPassword] = useState("");
 
   const handleLogin = () => {
@@ -378,20 +508,6 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
       setPassword("");
     }
   };
-
-  if (!showField) {
-    return (
-      <div className="text-center pt-2">
-        <button
-          type="button"
-          onClick={() => setShowField(true)}
-          className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-        >
-          Вход для администратора
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="rounded-lg border bg-card p-3 space-y-2">
@@ -404,22 +520,12 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-        placeholder="Пароль администратора"
+        placeholder="Пароль"
         className="text-sm"
         autoFocus
       />
       <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1"
-          onClick={() => {
-            setShowField(false);
-            setPassword("");
-          }}
-        >
-          Отмена
-        </Button>
+        <Button variant="outline" size="sm" className="flex-1" onClick={onCancel}>Отмена</Button>
         <Button size="sm" className="flex-1" onClick={handleLogin}>
           <Shield className="h-3.5 w-3.5" />
           Войти
