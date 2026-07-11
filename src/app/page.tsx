@@ -42,6 +42,7 @@ import { useI18n } from "@/components/language-provider";
 import { ConsultantModal } from "@/components/consultant-modal";
 import { ClientsPanel } from "@/components/clients-panel";
 import { RolePanel } from "@/components/role-panel";
+import { MentorsPanel } from "@/components/mentors-panel";
 import { useRole } from "@/components/role-provider";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
@@ -99,6 +100,7 @@ export default function Home() {
   const [neuroOpen, setNeuroOpen] = useState(false);
   const [clientsOpen, setClientsOpen] = useState(false);
   const [rolePanelOpen, setRolePanelOpen] = useState(false);
+  const [mentorsOpen, setMentorsOpen] = useState(false);
   const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro" | "tale" | "card">("standard");
   const [neuroResult, setNeuroResult] = useState<NeuroDiagnosis | null>(null);
   const [taleResult, setTaleResult] = useState<TaleDiagnosis | null>(null);
@@ -805,9 +807,11 @@ export default function Home() {
 
       <RolePanel open={rolePanelOpen} onOpenChange={setRolePanelOpen} />
 
+      <MentorsPanel open={mentorsOpen} onOpenChange={setMentorsOpen} />
+
       <NeurotransformingPanel open={neuroOpen} onOpenChange={setNeuroOpen} />
 
-      <Footer onConsultant={() => setConsultantOpen(true)} />
+      <Footer onConsultant={() => setConsultantOpen(true)} onMentors={() => setMentorsOpen(true)} />
     </div>
   );
 }
@@ -1049,7 +1053,7 @@ function LoadingState() {
   );
 }
 
-function Footer({ onConsultant }: { onConsultant: () => void }) {
+function Footer({ onConsultant, onMentors }: { onConsultant: () => void; onMentors: () => void }) {
   return (
     <footer className="mt-auto border-t bg-secondary/30">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 text-xs text-muted-foreground flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between safe-bottom">
@@ -1062,16 +1066,25 @@ function Footer({ onConsultant }: { onConsultant: () => void }) {
             Не заменяет работу с психологом или наставником.
           </span>
         </div>
-        <button
-          onClick={onConsultant}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors shrink-0"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          Личный консультант
-          <Badge variant="outline" className="text-xs h-4 py-0 border-amber-400/50 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300">
-            демо
-          </Badge>
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={onMentors}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Users className="h-3.5 w-3.5" />
+            Наставники
+          </button>
+          <button
+            onClick={onConsultant}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Консультант
+            <Badge variant="outline" className="text-xs h-4 py-0 border-amber-400/50 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300">
+              демо
+            </Badge>
+          </button>
+        </div>
       </div>
     </footer>
   );
