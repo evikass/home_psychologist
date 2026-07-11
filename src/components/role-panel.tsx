@@ -33,8 +33,19 @@ export function RolePanel({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
-  const { profile, role, isPsychologist, isAdmin, logout, applyAsPsychologist } = useRole();
+  const { profile, role, isPsychologist, isAdmin, logout, applyAsPsychologist, setProfile } = useRole();
   const [showApplyForm, setShowApplyForm] = useState(false);
+
+  const onAdminLogin = () => {
+    setProfile({
+      role: "admin",
+      name: "Администратор",
+      email: ADMIN_EMAIL,
+      approved: true,
+    });
+    toast.success("Вход выполнен. Режим администратора активирован.");
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -89,6 +100,9 @@ export function RolePanel({
                 VK
               </a>
             </div>
+
+            {/* Секретный вход админа */}
+            <AdminLogin onLogin={onAdminLogin} />
           </div>
         ) : (
           /* === Зарегистрированный пользователь === */
@@ -345,5 +359,72 @@ function PsychologistApplyForm({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// === Секретный вход администратора ===
+// Пароль хранится в env ADMIN_PASSWORD, по умолчанию "masterkit2026"
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "masterkit2026";
+
+function AdminLogin({ onLogin }: { onLogin: () => void }) {
+  const [showField, setShowField] = useState(false);
+  const [password, setPassword] = useState("");
+
+  const handleLogin = () => {
+    if (password === ADMIN_PASSWORD) {
+      onLogin();
+    } else {
+      toast.error("Неверный пароль.");
+      setPassword("");
+    }
+  };
+
+  if (!showField) {
+    return (
+      <div className="text-center pt-2">
+        <button
+          type="button"
+          onClick={() => setShowField(true)}
+          className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        >
+          Вход для администратора
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border bg-card p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <Shield className="h-4 w-4 text-primary" />
+        <span className="text-xs font-semibold">Вход администратора</span>
+      </div>
+      <Input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+        placeholder="Пароль администратора"
+        className="text-sm"
+        autoFocus
+      />
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          onClick={() => {
+            setShowField(false);
+            setPassword("");
+          }}
+        >
+          Отмена
+        </Button>
+        <Button size="sm" className="flex-1" onClick={handleLogin}>
+          <Shield className="h-3.5 w-3.5" />
+          Войти
+        </Button>
+      </div>
+    </div>
   );
 }
