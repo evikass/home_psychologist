@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Award,
@@ -44,18 +44,20 @@ export function RolePanel({
   const [adminPassword, setAdminPassword] = useState("");
 
   // При открытии панели — устанавливаем активную вкладку по роли
-  useState(() => {
-    if (role === "psychologist" || isAdmin) setActiveTab("psychologist");
-    else if (role === "user") setActiveTab("user");
-    else setActiveTab("guest");
-  });
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      if (role === "psychologist" || isAdmin) setActiveTab("psychologist");
+      else if (role === "user" && profile) setActiveTab("user");
+      else setActiveTab("guest");
+    });
+    return () => { active = false; };
+  }, [open, role, isAdmin, profile]);
 
-  // Если уже залогинен — показываем его вкладку
-  const displayTab: ProfileTab = profile
-    ? role === "psychologist" || isAdmin
-      ? "psychologist"
-      : "user"
-    : activeTab;
+  // displayTab = activeTab — единственный источник правды
+  const displayTab: ProfileTab = activeTab;
 
   const handleAdminLogin = () => {
     if (adminPassword === ADMIN_PASSWORD) {
