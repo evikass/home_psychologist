@@ -12,6 +12,7 @@ import {
   History,
   Image as ImageIcon,
   Loader2,
+  Play,
   RotateCcw,
   Send,
   Sparkles,
@@ -51,6 +52,8 @@ import { TaleDiagnosisCard } from "@/components/tale-diagnosis-card";
 import type { TaleDiagnosis } from "@/lib/diagnosis-types";
 import { CardDiagnosisCard } from "@/components/card-diagnosis-card";
 import type { CardDiagnosis } from "@/lib/diagnosis-types";
+import { SlideShow, SlideShowLoader } from "@/components/slideshow";
+import type { SlideStory } from "@/app/api/slide-create/route";
 import {
   useDiagnosisHistory,
   type HistoryEntry,
@@ -101,10 +104,11 @@ export default function Home() {
   const [clientsOpen, setClientsOpen] = useState(false);
   const [rolePanelOpen, setRolePanelOpen] = useState(false);
   const [mentorsOpen, setMentorsOpen] = useState(false);
-  const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro" | "tale" | "card">("standard");
+  const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro" | "tale" | "card" | "slides">("standard");
   const [neuroResult, setNeuroResult] = useState<NeuroDiagnosis | null>(null);
   const [taleResult, setTaleResult] = useState<TaleDiagnosis | null>(null);
   const [cardResult, setCardResult] = useState<CardDiagnosis | null>(null);
+  const [slideStory, setSlideStory] = useState<SlideStory | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -130,8 +134,22 @@ export default function Home() {
     setNeuroResult(null);
     setTaleResult(null);
     setCardResult(null);
+    setSlideStory(null);
+    setSlideStory(null);
 
     try {
+      // Слайды — генерация визуальной истории
+      if (diagnosisMode === "slides") {
+        if (IS_DEMO) {
+          toast.info("Слайды доступны только в полной версии на Vercel.");
+          setLoading(false);
+          return;
+        }
+        // Загрузка произойдёт через SlideShowLoader
+        setLoading(false);
+        return;
+      }
+
       // Метафорические карты — отдельный API
       if (diagnosisMode === "card") {
         if (IS_DEMO) {
@@ -271,6 +289,7 @@ export default function Home() {
     setNeuroResult(null);
     setTaleResult(null);
     setCardResult(null);
+    setSlideStory(null);
     setCurrentEntryId(null);
     setCurrentDoneProcessings([]);
     setError(null);
@@ -282,11 +301,12 @@ export default function Home() {
     setNeuroResult(null);
     setTaleResult(null);
     setCardResult(null);
+    setSlideStory(null);
     setError(null);
   };
 
   useEffect(() => {
-    if ((result || neuroResult || taleResult || cardResult) && resultRef.current) {
+    if ((result || neuroResult || taleResult || cardResult || slideStory) && resultRef.current) {
       resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [result, neuroResult, taleResult]);
@@ -314,7 +334,7 @@ export default function Home() {
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-24 safe-x">
         {/* HERO */}
-        {!result && !neuroResult && !taleResult && !cardResult && !loading && (
+        {!result && !neuroResult && !taleResult && !cardResult && !slideStory && !loading && (
           <Hero onPickExample={handleExample} />
         )}
 
@@ -331,7 +351,7 @@ export default function Home() {
         )}
 
         {/* ФОРМА ВВОДА — всегда, если нет результата */}
-        {!result && !neuroResult && !taleResult && !cardResult && (
+        {!result && !neuroResult && !taleResult && !cardResult && !slideStory && (
           <section
             id="form"
             className="mt-6 sm:mt-10 scroll-mt-4"
@@ -390,6 +410,19 @@ export default function Home() {
               >
                 <ImageIcon className="h-4 w-4 shrink-0" />
                 <span>Карты</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiagnosisMode("slides")}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 px-2 py-2 rounded-md text-xs transition-all",
+                  diagnosisMode === "slides"
+                    ? "bg-background shadow-sm text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Play className="h-4 w-4 shrink-0" />
+                <span>Слайды</span>
               </button>
             </div>
 
@@ -645,10 +678,54 @@ export default function Home() {
               <CardDiagnosisCard data={cardResult} />
             </motion.div>
           )}
+
+          {/* РЕЗУЛЬТАТ СЛАЙДОВ */}
+          {diagnosisMode === "slides" && !slideStory && !loading && text.trim().length >= 20 && (
+            <motion.div
+              ref={resultRef}
+              key="slides-loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-6 scroll-mt-4"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display text-lg sm:text-xl font-semibold flex items-center gap-2">
+                  <Play className="h-5 w-5 text-primary" />
+                  Визуальная история
+                </h2>
+                <Button variant="outline" size="sm" onClick={handleReset} className="rounded-full">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  {t("result.new")}
+                </Button>
+              </div>
+              <SlideShowLoader text={text} onComplete={(s) => setSlideStory(s)} />
+            </motion.div>
+          )}
+          {slideStory && (
+            <motion.div
+              ref={resultRef}
+              key="slides-result"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-6 scroll-mt-4"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display text-lg sm:text-xl font-semibold flex items-center gap-2">
+                  <Play className="h-5 w-5 text-primary" />
+                  Визуальная история
+                </h2>
+                <Button variant="outline" size="sm" onClick={handleReset} className="rounded-full">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  {t("result.new")}
+                </Button>
+              </div>
+              <SlideShow story={slideStory} />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* МЕТОДИКА — раскрывающийся блок */}
-        {!result && !neuroResult && !taleResult && !cardResult && (
+        {!result && !neuroResult && !taleResult && !cardResult && !slideStory && (
           <Accordion type="single" collapsible className="mt-12">
             <AccordionItem
               value="method"
