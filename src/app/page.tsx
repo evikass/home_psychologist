@@ -45,6 +45,8 @@ import { ClientsPanel } from "@/components/clients-panel";
 import { RolePanel } from "@/components/role-panel";
 import { MentorsPanel } from "@/components/mentors-panel";
 import { useRole } from "@/components/role-provider";
+import { AdminActivityPanel } from "@/components/admin-activity-panel";
+import { trackActivity, useActivityTracker } from "@/lib/activity-tracker";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
 import type { NeuroDiagnosis } from "@/lib/diagnosis-types";
@@ -123,6 +125,9 @@ export default function Home() {
   const { isPsychologist, isAdmin, profile } = useRole();
   const canSeeClients = (isPsychologist && profile?.approved) || isAdmin;
 
+  // Трекинг визита при загрузке
+  useActivityTracker();
+
   const handleSubmit = async () => {
     if (text.trim().length < 20) {
       toast.error(t("error.too_short"));
@@ -165,6 +170,7 @@ export default function Home() {
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || "Не удалось подобрать карту.");
         setCardResult(data as CardDiagnosis);
+        trackActivity("card", "Метафорические карты");
         return;
       }
 
@@ -185,6 +191,7 @@ export default function Home() {
           throw new Error(data?.error || "Не удалось получить сказку.");
         }
         setTaleResult(data as TaleDiagnosis);
+        trackActivity("tale", "Сказкотерапия");
         return;
       }
 
@@ -205,6 +212,7 @@ export default function Home() {
           throw new Error(data?.error || "Не удалось получить нейро-диагноз.");
         }
         setNeuroResult(data as NeuroDiagnosis);
+        trackActivity("neuro", "Нейро-диагноз");
         return;
       }
 
@@ -214,6 +222,7 @@ export default function Home() {
         await new Promise((r) => setTimeout(r, 1200));
         const demoResult = getDemoDiagnosis(text);
         setResult(demoResult);
+        trackActivity("diagnosis", "Стандартный диагноз (demo)");
         setCurrentDoneProcessings([]);
         const newEntry = { id: `${Date.now()}-demo`, timestamp: Date.now(), text: text.slice(0, 280), result: demoResult };
         addEntry(text, demoResult);
@@ -238,6 +247,7 @@ export default function Home() {
       }
       const finalResult = data as DiagnoseResponse;
       setResult(finalResult);
+        trackActivity("diagnosis", "Стандартный диагноз");
       setCurrentDoneProcessings([]);
       addEntry(text, finalResult);
       // Получаем ID только что добавленной записи (первая в истории)

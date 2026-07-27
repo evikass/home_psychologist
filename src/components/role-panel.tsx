@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useRole, ADMIN_EMAIL, ADMIN_VK } from "@/components/role-provider";
+import { AdminActivityPanel } from "@/components/admin-activity-panel";
 import { toast } from "sonner";
 
 type ProfileTab = "guest" | "user" | "psychologist";
@@ -472,6 +473,9 @@ function PsychologistTab({
         <LogOut className="h-3.5 w-3.5" />
         Выйти
       </Button>
+
+      {/* Админ-панель активности — только для админа */}
+      {isAdmin && <AdminActivityPanel />}
     </div>
   );
 }
