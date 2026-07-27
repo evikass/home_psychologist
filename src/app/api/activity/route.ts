@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { kv } from "@vercel/kv";
 
 export const runtime = "nodejs";
 export const maxDuration = 10;
 
-// In-memory хранилище (персистирует в рамках одного serverless instance)
 type ActivityEntry = {
   id: string;
   type: string;
@@ -11,16 +11,25 @@ type ActivityEntry = {
   details: string | null;
   browser: string;
   device: string;
-  userAgent: string;
   createdAt: string;
 };
 
-// Глобальное хранилище — переживает холодные старты в пределах инстанса
+// In-memory fallback (если KV не настроен)
 const globalStore = globalThis as unknown as { __activityLogs?: ActivityEntry[] };
-if (!globalStore.__activityLogs) {
-  globalStore.__activityLogs = [];
+if (!globalStore.__activityLogs) globalStore.__activityLogs = [];
+const memLogs: ActivityEntry[] = globalStore.__activityLogs;
+
+// Проверяем, доступен ли KV
+function isKVAvailable(): boolean {
+  try {
+    return !!process.env.KV_REST_API_URL || !!process.env.KV_URL;
+  } catch {
+    return false;
+  }
 }
-const logs: ActivityEntry[] = globalStore.__activityLogs;
+
+const KV_KEY = "activity:logs";
+const KV_MAX = 500;
 
 function parseUA(ua: string): { browser: string; device: string } {
   let browser = "Браузер";
@@ -42,7 +51,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const { type, label, details } = body;
-
     if (!type || !label) {
       return NextResponse.json({ error: "type и label обязательны" }, { status: 400 });
     }
@@ -57,15 +65,23 @@ export async function POST(req: NextRequest) {
       details: details ? String(details) : null,
       browser,
       device,
-      userAgent: ua,
       createdAt: new Date().toISOString(),
     };
 
-    logs.unshift(entry);
-
-    // Ограничиваем размер
-    if (logs.length > 500) {
-      logs.length = 500;
+    if (isKVAvailable()) {
+      // KV: добавляем в начало списка (LPUSH)
+      try {
+        await kv.lpush(KV_KEY, JSON.stringify(entry));
+        // Ограничиваем размер
+        await kv.ltrim(KV_KEY, 0, KV_MAX - 1);
+      } catch (e) {
+        console.error("[activity] KV write error, fallback to memory:", e);
+        memLogs.unshift(entry);
+        if (memLogs.length > KV_MAX) memLogs.length = KV_MAX;
+      }
+    } else {
+      memLogs.unshift(entry);
+      if (memLogs.length > KV_MAX) memLogs.length = KV_MAX;
     }
 
     return NextResponse.json({ ok: true });
@@ -78,6 +94,23 @@ export async function POST(req: NextRequest) {
 // GET — статистика для админа
 export async function GET() {
   try {
+    let allLogs: ActivityEntry[] = [];
+
+    if (isKVAvailable()) {
+      try {
+        const rawLogs = await kv.lrange(KV_KEY, 0, KV_MAX - 1);
+        allLogs = rawLogs.map((r) => {
+          if (typeof r === "string") return JSON.parse(r) as ActivityEntry;
+          return r as ActivityEntry;
+        });
+      } catch (e) {
+        console.error("[activity] KV read error, fallback to memory:", e);
+        allLogs = [...memLogs];
+      }
+    } else {
+      allLogs = [...memLogs];
+    }
+
     // Группируем по сессиям (30-минутные окна одного браузера)
     const sessions: Array<{
       browser: string;
@@ -88,7 +121,7 @@ export async function GET() {
       recentEvents: ActivityEntry[];
     }> = [];
 
-    for (const log of logs) {
+    for (const log of allLogs) {
       const lastSession = sessions[sessions.length - 1];
       const logTime = new Date(log.createdAt).getTime();
 
@@ -115,24 +148,23 @@ export async function GET() {
       }
     }
 
-    // Подсчёт по типам
     const actionCounts: Record<string, number> = {};
-    for (const log of logs) {
+    for (const log of allLogs) {
       if (log.type !== "visit") {
         actionCounts[log.type] = (actionCounts[log.type] || 0) + 1;
       }
     }
 
-    // Уникальные
-    const devicesSet = new Set(logs.map((l) => l.device));
-    const browsersSet = new Set(logs.map((l) => l.browser));
+    const devicesSet = new Set(allLogs.map((l) => l.device));
+    const browsersSet = new Set(allLogs.map((l) => l.browser));
 
     return NextResponse.json({
-      totalLogs: logs.length,
+      totalLogs: allLogs.length,
       totalSessions: sessions.length,
       actionCounts,
       devices: Array.from(devicesSet),
       browsers: Array.from(browsersSet),
+      storage: isKVAvailable() ? "Vercel KV (постоянно)" : "In-memory (временное)",
       sessions: sessions.slice(0, 20).map((s) => ({
         browser: s.browser,
         device: s.device,
