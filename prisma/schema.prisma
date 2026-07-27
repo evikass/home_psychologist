@@ -60,3 +60,14 @@ model Session {
   notes       String?  // заметки наставника
   createdAt   DateTime @default(now())
 }
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  type      String   // visit | diagnosis | neuro | tale | card | slides | chat | consultant | export | voice | theme
+  label     String
+  details   String?
+  userAgent String?
+  browser   String?
+  device    String?  // mobile | tablet | desktop
+  createdAt DateTime @default(now())
+}
