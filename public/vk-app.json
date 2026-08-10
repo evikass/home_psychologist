@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "title": "Домашний психолог",
+  "description": "ИИ-диагностика и самотерапия",
+  "app_id": 52589205,
+  "viewport": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+  "settings": {
+    "status_bar_style": "light",
+    "action_bar_color": "#c2624a",
+    "navigation_bar_color": "#c2624a"
+  }
+}

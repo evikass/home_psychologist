@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/components/language-provider";
 import { RoleProvider } from "@/components/role-provider";
+import { VKBridgeProvider } from "@/components/vk-bridge-provider";
 import { StarsOverlay } from "@/components/stars-overlay";
 
 const inter = Inter({
@@ -98,8 +99,10 @@ export default function RootLayout({
         >
           <LanguageProvider>
             <RoleProvider>
-              <StarsOverlay />
-              <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
+              <VKBridgeProvider>
+                <StarsOverlay />
+                <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
+              </VKBridgeProvider>
             </RoleProvider>
           </LanguageProvider>
         </ThemeProvider>
