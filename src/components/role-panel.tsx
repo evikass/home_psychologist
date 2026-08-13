@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { useRole, ADMIN_EMAIL, ADMIN_VK } from "@/components/role-provider";
 import { AdminActivityPanel } from "@/components/admin-activity-panel";
+import { useIsVK, useVKUser } from "@/components/vk-bridge-provider";
 import { toast } from "sonner";
 
 type ProfileTab = "guest" | "user" | "psychologist";
@@ -95,12 +96,31 @@ export function RolePanel({
   onOpenChange: (v: boolean) => void;
 }) {
   const { profile, role, isAdmin, logout, applyAsPsychologist, setProfile } = useRole();
+  const isVK = useIsVK();
+  const vkUser = useVKUser();
   const [activeTab, setActiveTab] = useState<ProfileTab>("guest");
   const [showApplyForm, setShowApplyForm] = useState(false);
 
   // Форма входа
   const [loginName, setLoginName] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+
+  // VK бесшовная авторизация
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      if (isVK && vkUser && !profile) {
+        setProfile({
+          role: "user",
+          name: `${vkUser.first_name} ${vkUser.last_name}`,
+          email: `vk_${vkUser.id}`,
+        });
+        setActiveTab("user");
+      }
+    });
+    return () => { active = false; };
+  }, [isVK, vkUser, profile, setProfile]);
 
   // При открытии — определяем вкладку
   useEffect(() => {
@@ -254,61 +274,76 @@ export function RolePanel({
             {/* === ГОСТЬ — форма входа === */}
             {displayTab === "guest" && (
               <div className="space-y-3">
-                <div className="rounded-lg bg-secondary/40 p-4 text-center">
-                  <User className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm font-medium">Режим гостя</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Диагнозы, история, аналитика — без входа
-                  </p>
-                </div>
+                {isVK ? (
+                  // В VK — бесшовная авторизация, форма не нужна
+                  <div className="rounded-lg bg-secondary/40 p-4 text-center">
+                    <User className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm font-medium">
+                      {vkUser ? `Привет, ${vkUser.first_name}!` : "Загрузка..."}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Вы вошли через VK
+                    </p>
+                  </div>
+                ) : (
+                  // Вне VK — форма входа
+                  <>
+                    <div className="rounded-lg bg-secondary/40 p-4 text-center">
+                      <User className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm font-medium">Режим гостя</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Диагнозы, история, аналитика — без входа
+                      </p>
+                    </div>
 
-                {/* Единая форма входа */}
-                <div className="rounded-xl border bg-card p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-primary" />
-                    <span className="font-display font-semibold text-sm">Вход в систему</span>
-                  </div>
-                  <Input
-                    value={loginName}
-                    onChange={(e) => setLoginName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                    placeholder="Имя"
-                    className="text-sm"
-                  />
-                  <Input
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                    placeholder="Пароль"
-                    className="text-sm"
-                  />
-                  <div className="flex flex-col gap-2">
-                    <Button size="sm" className="w-full" onClick={handleLogin}>
-                      <Lock className="h-3.5 w-3.5" />
-                      Войти
-                    </Button>
-                    <Button size="sm" variant="outline" className="w-full" onClick={handleRegister}>
-                      <User className="h-3.5 w-3.5" />
-                      Регистрация
-                    </Button>
-                  </div>
-                </div>
+                    <div className="rounded-xl border bg-card p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Lock className="h-4 w-4 text-primary" />
+                        <span className="font-display font-semibold text-sm">Вход в систему</span>
+                      </div>
+                      <Input
+                        value={loginName}
+                        onChange={(e) => setLoginName(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                        placeholder="Имя"
+                        className="text-sm"
+                      />
+                      <Input
+                        type="password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                        placeholder="Пароль"
+                        className="text-sm"
+                      />
+                      <div className="flex flex-col gap-2">
+                        <Button size="sm" className="w-full" onClick={handleLogin}>
+                          <Lock className="h-3.5 w-3.5" />
+                          Войти
+                        </Button>
+                        <Button size="sm" variant="outline" className="w-full" onClick={handleRegister}>
+                          <User className="h-3.5 w-3.5" />
+                          Регистрация
+                        </Button>
+                      </div>
+                    </div>
 
-                {/* Стать психологом */}
-                <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-3">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <Award className="h-4 w-4 text-primary" />
-                    <span className="font-display font-semibold text-sm">Вы психолог?</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
-                    Отправьте заявку — после одобрения откроется CRM клиентов
-                  </p>
-                  <Button size="sm" variant="outline" className="w-full" onClick={() => setShowApplyForm(true)}>
-                    <Send className="h-3.5 w-3.5" />
-                    Подать заявку
-                  </Button>
-                </div>
+                    {/* Стать психологом — скрыто в VK */}
+                    <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-3">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Award className="h-4 w-4 text-primary" />
+                        <span className="font-display font-semibold text-sm">Вы психолог?</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+                        Отправьте заявку — после одобрения откроется CRM клиентов
+                      </p>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => setShowApplyForm(true)}>
+                        <Send className="h-3.5 w-3.5" />
+                        Подать заявку
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

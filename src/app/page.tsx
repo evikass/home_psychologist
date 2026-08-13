@@ -47,6 +47,7 @@ import { MentorsPanel } from "@/components/mentors-panel";
 import { useRole } from "@/components/role-provider";
 import { AdminActivityPanel } from "@/components/admin-activity-panel";
 import { trackActivity, useActivityTracker } from "@/lib/activity-tracker";
+import { useIsVK, useVKUser } from "@/components/vk-bridge-provider";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
 import type { NeuroDiagnosis } from "@/lib/diagnosis-types";
@@ -127,6 +128,10 @@ export default function Home() {
 
   // Трекинг визита при загрузке
   useActivityTracker();
+
+  // VK-режим
+  const isVK = useIsVK();
+  const vkUser = useVKUser();
 
   const handleSubmit = async () => {
     if (text.trim().length < 20) {
@@ -898,7 +903,7 @@ export default function Home() {
 
       <NeurotransformingPanel open={neuroOpen} onOpenChange={setNeuroOpen} />
 
-      <Footer onConsultant={() => setConsultantOpen(true)} onMentors={() => setMentorsOpen(true)} />
+      <Footer onConsultant={() => setConsultantOpen(true)} onMentors={() => setMentorsOpen(true)} isVK={isVK} />
     </div>
   );
 }
@@ -1016,6 +1021,7 @@ function Header({
 
 function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
   const { t, lang } = useI18n();
+  const isVK = useIsVK();
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
@@ -1028,7 +1034,7 @@ function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
           <Sparkles className="h-3 w-3 mr-1" />
           Метод самотерапии
         </Badge>
-        {IS_DEMO && (
+        {IS_DEMO && !isVK && (
           <Badge
             variant="outline"
             className="mb-3 ml-2 text-xs border-amber-400/50 text-amber-700 bg-amber-50"
@@ -1048,7 +1054,7 @@ function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
           Опишите свою ситуацию своими словами — как жалобное письмо другу. ИИ
           определит уровень развития, застрявшую эмоцию, эмоциональную яму и
           подберёт точные проработки на этот момент.
-          {IS_DEMO && (
+          {IS_DEMO && !isVK && (
             <span className="block mt-2 text-xs text-amber-700/90">
               ⚠️ Это демо-версия на GitHub Pages — использует предзаготовленные
               диагнозы по ключевым словам. Для живого ИИ-анализа используйте
@@ -1140,38 +1146,37 @@ function LoadingState() {
   );
 }
 
-function Footer({ onConsultant, onMentors }: { onConsultant: () => void; onMentors: () => void }) {
+function Footer({ onConsultant, onMentors, isVK }: { onConsultant: () => void; onMentors: () => void; isVK: boolean }) {
   return (
     <footer className="mt-auto border-t bg-secondary/30">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 text-xs text-muted-foreground flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between safe-bottom">
         <div className="flex flex-col gap-1.5">
           <span>
-            © {new Date().getFullYear()} · Инструмент самотерапии
-            «Домашний психолог»
+            © {new Date().getFullYear()} · «Домашний психолог»
           </span>
           <span>
             Не заменяет работу с психологом или наставником.
           </span>
         </div>
-        <div className="flex gap-2 shrink-0">
-          <button
-            onClick={onMentors}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
-          >
-            <Users className="h-3.5 w-3.5" />
-            Наставники
-          </button>
-          <button
-            onClick={onConsultant}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            Консультант
-            <Badge variant="outline" className="text-xs h-4 py-0 border-amber-400/50 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300">
-              демо
-            </Badge>
-          </button>
-        </div>
+        {/* В VK — убираем кнопки с монетизацией и внешними ссылками */}
+        {!isVK && (
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={onMentors}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Users className="h-3.5 w-3.5" />
+              Наставники
+            </button>
+            <button
+              onClick={onConsultant}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Консультант
+            </button>
+          </div>
+        )}
       </div>
     </footer>
   );
