@@ -1,7 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
+
+// Блокировка служебных эндпоинтов при открытии в VK
+function isVKRequest(req: NextRequest): boolean {
+  const referer = req.headers.get("referer") || "";
+  const ua = req.headers.get("user-agent") || "";
+  return referer.includes("vk.com") || referer.includes("vk.ru") || ua.includes("VKApp");
+}
 
 /**
  * Расширенный диагностический эндпоинт:
@@ -9,7 +16,10 @@ export const maxDuration = 30;
  * 2. Делает тестовый запрос к Z.ai с разными моделями
  * 3. Показывает статус и тело ответа для каждой модели
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (isVKRequest(req)) {
+    return NextResponse.json({ error: "Not available" }, { status: 404 });
+  }
   const apiKey =
     process.env.ZAI_API_KEY ||
     process.env.Z_AI_API_KEY ||

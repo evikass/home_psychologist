@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { useRole, ADMIN_EMAIL, ADMIN_VK } from "@/components/role-provider";
 import { AdminActivityPanel } from "@/components/admin-activity-panel";
+import { useIsVK, useVKUser } from "@/components/vk-bridge-provider";
 import { toast } from "sonner";
 
 type ProfileTab = "guest" | "user" | "psychologist";
@@ -95,12 +96,31 @@ export function RolePanel({
   onOpenChange: (v: boolean) => void;
 }) {
   const { profile, role, isAdmin, logout, applyAsPsychologist, setProfile } = useRole();
+  const isVK = useIsVK();
+  const vkUser = useVKUser();
   const [activeTab, setActiveTab] = useState<ProfileTab>("guest");
   const [showApplyForm, setShowApplyForm] = useState(false);
 
   // Форма входа
   const [loginName, setLoginName] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+
+  // VK бесшовная авторизация
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      if (isVK && vkUser && !profile) {
+        setProfile({
+          role: "user",
+          name: `${vkUser.first_name} ${vkUser.last_name}`,
+          email: `vk_${vkUser.id}`,
+        });
+        setActiveTab("user");
+      }
+    });
+    return () => { active = false; };
+  }, [isVK, vkUser, profile, setProfile]);
 
   // При открытии — определяем вкладку
   useEffect(() => {
@@ -238,7 +258,9 @@ export function RolePanel({
 
         {/* Вкладки ролей — только для отображения текущего статуса */}
         <div className="grid grid-cols-3 gap-1 p-1 bg-secondary/50 rounded-lg">
-          <RoleTabButton active={displayTab === "guest"} onClick={() => { if (profile) handleLogout(); }} icon={User} label="Гость" />
+          {!isVK && (
+            <RoleTabButton active={displayTab === "guest"} onClick={() => { if (profile) handleLogout(); }} icon={User} label="Гость" />
+          )}
           <RoleTabButton active={displayTab === "user"} onClick={() => { if (!profile) setActiveTab("guest"); }} icon={Check} label="Пользователь" />
           <RoleTabButton active={displayTab === "psychologist"} onClick={() => { if (!profile) setShowApplyForm(true); }} icon={Award} label="Психолог" />
         </div>
@@ -336,10 +358,12 @@ export function RolePanel({
                     <li className="flex items-center gap-1.5 text-muted-foreground"><X className="h-3 w-3" /> CRM (только для психологов)</li>
                   </ul>
                 </div>
-                <Button size="sm" variant="ghost" className="w-full text-destructive" onClick={handleLogout}>
-                  <LogOut className="h-3.5 w-3.5" />
-                  Выйти
-                </Button>
+                {!isVK && (
+                  <Button size="sm" variant="ghost" className="w-full text-destructive" onClick={handleLogout}>
+                    <LogOut className="h-3.5 w-3.5" />
+                    Выйти
+                  </Button>
+                )}
               </div>
             )}
 
