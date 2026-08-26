@@ -188,7 +188,7 @@ export async function POST(req: NextRequest) {
               { role: "user", content: text },
             ],
             temperature: 0.8,
-            max_tokens: 2500,
+            max_tokens: 1500,
             thinking: { type: "disabled" },
           }),
           signal: controller.signal,

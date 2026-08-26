@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
       try {
         const response = await fetch(url, {
           method: "POST", headers,
-          body: JSON.stringify({ model, messages: [{ role: "system", content: SYSTEM_PROMPT }, { role: "user", content: text }], temperature: 0.75, max_tokens: 2000, thinking: { type: "disabled" } }),
+          body: JSON.stringify({ model, messages: [{ role: "system", content: SYSTEM_PROMPT }, { role: "user", content: text }], temperature: 0.75, max_tokens: 1500, thinking: { type: "disabled" } }),
           signal: controller.signal,
         });
         const bodyText = await response.text();
