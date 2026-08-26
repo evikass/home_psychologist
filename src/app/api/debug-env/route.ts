@@ -96,7 +96,8 @@ export async function GET(req: NextRequest) {
         body: JSON.stringify({
           model,
           messages: [{ role: "user", content: "Скажи привет" }],
-          max_tokens: 20,
+          max_tokens: 200,
+          thinking: { type: "disabled" },
         }),
         signal: controller.signal,
       });

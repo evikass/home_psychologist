@@ -121,7 +121,11 @@ export async function callZaiMessages(
   const { apiKey, baseUrl, token, chatId, userId } = config;
   const url = `${baseUrl}/chat/completions`;
   const temperature = options?.temperature ?? 0.7;
-  const maxTokens = options?.maxTokens ?? 1500;
+  // ВАЖНО: на Vercel проде (api.z.ai/api/paas/v4) GLM-4.5-flash ИГНОРИРУЕТ
+  // `thinking: { type: "disabled" }` и всё равно генерирует reasoning_content.
+  // reasoning_content сжирает весь max_tokens, и content остаётся пустым.
+  // Поэтому ставим max_tokens минимум 3000 — чтобы хватило и на reasoning, и на content.
+  const maxTokens = Math.max(options?.maxTokens ?? 1500, 3000);
   const timeoutMs = options?.timeoutMs ?? 50000;
   const maxAttempts = options?.noRetries ? 1 : 2;
 
@@ -138,7 +142,7 @@ export async function callZaiMessages(
 
   try {
     for (const model of MODELS_TO_TRY) {
-      console.log(`[zai] trying model: ${model}`);
+      console.log(`[zai] trying model: ${model}, max_tokens: ${maxTokens}`);
 
       let response: Response | null = null;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -156,6 +160,9 @@ export async function callZaiMessages(
               messages,
               temperature,
               max_tokens: maxTokens,
+              // На песочнице (internal-api) отключает reasoning.
+              // На проде (api.z.ai/api/paas/v4) НЕ отключает, но мы компенсируем
+              // большим max_tokens выше.
               thinking: { type: "disabled" },
             }),
             signal: localController.signal,
@@ -209,13 +216,50 @@ export async function callZaiMessages(
               message?: { content?: string; reasoning_content?: string };
             }[];
           })?.choices?.[0]?.message ?? {};
-        const content = message.content || message.reasoning_content || "";
+
+        // На Vercel проде GLM-4.5-flash часто возвращает:
+        //   content: "" (пустой)
+        //   reasoning_content: "..." (с размышлениями модели)
+        // В reasoning_content обычно есть полный JSON — модель просто не дошла до content.
+        // Поэтому если content пустой, но reasoning_content есть — пробуем достать JSON оттуда.
+        const content = message.content || "";
+        const reasoning = message.reasoning_content || "";
 
         if (content) {
           console.log(
             `[zai] success with model: ${model}, content length: ${content.length}`
           );
           return { ok: true, content };
+        }
+
+        if (reasoning) {
+          // Пробуем найти JSON в reasoning_content
+          const jsonStart = reasoning.indexOf("{");
+          const jsonEnd = reasoning.lastIndexOf("}");
+          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            const possibleJson = reasoning.slice(jsonStart, jsonEnd + 1);
+            try {
+              JSON.parse(possibleJson);
+              console.log(
+                `[zai] success with model: ${model}, extracted JSON from reasoning_content (len=${possibleJson.length})`
+              );
+              return { ok: true, content: possibleJson };
+            } catch {
+              // JSON не валиден — продолжаем
+            }
+          }
+
+          // Если JSON не найден, но reasoning_content есть —
+          // возможно, модель просто не завершила. Пробуем следующую модель.
+          console.warn(
+            `[zai] model ${model} returned empty content, reasoning_content has no JSON (len=${reasoning.length}), trying next`
+          );
+          lastError = {
+            ok: false,
+            status: 502,
+            body: `Empty content, reasoning_content without JSON (model: ${model})`,
+          };
+          continue;
         }
 
         console.warn(
