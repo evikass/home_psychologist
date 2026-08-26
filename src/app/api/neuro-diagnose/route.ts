@@ -1,46 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 import { MIPS_LEVELS, BRAINWAVE_STATES, NEURO_TECHNIQUES } from "@/lib/neurotransforming-data";
+import {
+  getZaiConfig,
+  callZaiChatEdge,
+  extractJson,
+  handleZaiError,
+} from "@/lib/zai-edge";
 
-export const runtime = "nodejs";
-export const maxDuration = 60
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
-
-type ZaiConfig = {
-  apiKey: string;
-  baseUrl: string;
-  token?: string;
-  chatId?: string;
-  userId?: string;
-};
-
-function getZaiConfig(): ZaiConfig {
-  const envKey = process.env.ZAI_API_KEY || process.env.Z_AI_API_KEY || process.env.ZAI_KEY;
-  const envUrl = process.env.ZAI_BASE_URL || process.env.Z_AI_BASE_URL || "https://api.z.ai/api/paas/v4";
-  if (envKey) return { apiKey: envKey, baseUrl: envUrl };
-
-  try {
-    const configPaths = ["/etc/.z-ai-config", path.join(process.cwd(), ".z-ai-config")];
-    for (const filePath of configPaths) {
-      try {
-        if (fs.existsSync(filePath)) {
-          const config = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-          if (config.baseUrl && config.apiKey) {
-            return {
-              apiKey: config.apiKey,
-              baseUrl: config.baseUrl,
-              token: config.token,
-              chatId: config.chatId,
-              userId: config.userId,
-            };
-          }
-        }
-      } catch {}
-    }
-  } catch {}
-  return { apiKey: "", baseUrl: envUrl };
-}
 
 const SYSTEM_PROMPT = `Ты — эксперт по нейротрансформингу С.В. Ковалёва.
 Твоя задача — проанализировать «жалобное письмо» человека и выдать полный разбор ситуации
@@ -156,19 +124,6 @@ export type NeuroDiagnosis = {
   summary: string;
 };
 
-function extractJson(raw: string): unknown {
-  let text = raw.trim();
-  if (text.startsWith("```")) {
-    text = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-  }
-  const first = text.indexOf("{");
-  const last = text.lastIndexOf("}");
-  if (first === -1 || last === -1 || last <= first) {
-    throw new Error("В ответе LLM нет валидного JSON");
-  }
-  return JSON.parse(text.slice(first, last + 1));
-}
-
 function validateDiagnosis(d: unknown): NeuroDiagnosis {
   if (!d || typeof d !== "object") throw new Error("Ответ не объект");
   const obj = d as Record<string, unknown>;
@@ -260,106 +215,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const url = `${config.baseUrl}/chat/completions`;
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`,
-      "X-Z-AI-From": "Z",
-    };
-    if (config.token) headers["X-Token"] = config.token;
-    if (config.chatId) headers["X-Chat-Id"] = config.chatId;
-    if (config.userId) headers["X-User-Id"] = config.userId;
+    const result = await callZaiChatEdge(config, SYSTEM_PROMPT, text, {
+      temperature: 0.7,
+      maxTokens: 1500,
+    });
 
-    const MODELS_TO_TRY = [
-      "glm-4.5-flash",
-      "glm-4.6-flash",
-      "glm-4-flash-250414",
-      "glm-4-flash",
-      "glm-4-air",
-      "glm-4-plus",
-      "glm-4",
-    ];
-
-    let lastError: { status: number; body: string } | null = null;
-
-    for (const model of MODELS_TO_TRY) {
-      console.log(`[neuro-diagnose] trying model: ${model}`);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 55000);
-
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: text },
-            ],
-            temperature: 0.7,
-            max_tokens: 1500,
-            thinking: { type: "disabled" },
-          }),
-          signal: controller.signal,
-        });
-
-        const bodyText = await response.text();
-        clearTimeout(timeout);
-
-        if (response.ok) {
-          let data: unknown;
-          try {
-            data = JSON.parse(bodyText);
-          } catch {
-            continue;
-          }
-          const message = (data as { choices?: { message?: { content?: string; reasoning_content?: string } }[] })
-            ?.choices?.[0]?.message ?? {};
-          const content = message.content || message.reasoning_content || "";
-          if (!content) continue;
-
-          console.log(`[neuro-diagnose] success with model: ${model}, content length: ${content.length}`);
-          try {
-            const parsed = validateDiagnosis(extractJson(content));
-            return NextResponse.json(parsed);
-          } catch (e) {
-            console.error("[neuro-diagnose] parse error:", (e as Error).message);
-            return NextResponse.json(
-              { error: "Не удалось разобрать диагноз. Попробуйте ещё раз.", raw_preview: content.slice(0, 400) },
-              { status: 502 }
-            );
-          }
-        }
-
-        const isModelError =
-          response.status === 400 &&
-          (bodyText.includes("Unknown Model") || bodyText.toLowerCase().includes("model"));
-        if (isModelError) {
-          lastError = { status: response.status, body: bodyText };
-          continue;
-        }
-
-        if (response.status === 401) {
-          return NextResponse.json(
-            { error: "Ключ Z.ai невалиден (401). Создайте новый на z.ai." },
-            { status: 502 }
-          );
-        }
-
-        return NextResponse.json(
-          { error: `Z.ai API error: ${response.status}` },
-          { status: 502 }
-        );
-      } catch {
-        clearTimeout(timeout);
-        continue;
-      }
+    if (!result.ok) {
+      return handleZaiError(result, NextResponse);
     }
 
-    return NextResponse.json({ error: "Все модели недоступны." }, { status: 502 });
+    try {
+      const parsed = validateDiagnosis(extractJson(result.content));
+      return NextResponse.json(parsed);
+    } catch (e) {
+      console.error("[neuro-diagnose-edge] parse error:", (e as Error).message);
+      return NextResponse.json(
+        {
+          error: "Не удалось разобрать диагноз. Попробуйте ещё раз.",
+          raw_preview: result.content.slice(0, 400),
+        },
+        { status: 502 }
+      );
+    }
   } catch (err) {
-    console.error("[neuro-diagnose] fatal:", err);
+    console.error("[neuro-diagnose-edge] fatal:", err);
     return NextResponse.json({ error: "Сервис недоступен." }, { status: 500 });
   }
 }

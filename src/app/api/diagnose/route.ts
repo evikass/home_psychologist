@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 import {
   SYSTEM_PROMPT,
   VALID_EMOTION_IDS,
@@ -9,240 +7,19 @@ import {
   VALID_BEINGNESS_IDS,
   type DiagnoseResponse,
 } from "@/lib/masterkit-prompt";
-
-export const runtime = "nodejs";
-export const maxDuration = 60
-export const dynamic = "force-dynamic";
+import {
+  getZaiConfig,
+  callZaiChatEdge,
+  extractJson,
+  handleZaiError,
+} from "@/lib/zai-edge";
 
 /**
- * Создаёт клиент Z.ai.
- * Поддерживаемые источники (по приоритету):
- *   1. Env-переменные ZAI_API_KEY / Z_AI_API_KEY / ZAI_KEY (Vercel, продакшн)
- *   2. Файл /etc/.z-ai-config (песочница, локальная разработка)
- *   3. Файл .z-ai-config в корне проекта (альтернативная локальная разработка)
- *
- * Возвращает apiKey, baseUrl и опционально token + chatId + userId
- * (для песочницы, где нужен JWT-токен).
+ * EDGE RUNTIME — 25 секунд таймаут вместо 10 сек на Node.js Serverless.
+ * Этого должно хватить для Z.ai GLM-4.5-flash (обычно отвечает за 5-20 сек).
  */
-type ZaiConfig = {
-  apiKey: string;
-  baseUrl: string;
-  token?: string;
-  chatId?: string;
-  userId?: string;
-};
-
-function getZaiConfig(): ZaiConfig {
-  // 1. Env-переменные
-  const envKey =
-    process.env.ZAI_API_KEY ||
-    process.env.Z_AI_API_KEY ||
-    process.env.ZAI_KEY;
-
-  const envUrl =
-    process.env.ZAI_BASE_URL ||
-    process.env.Z_AI_BASE_URL ||
-    "https://api.z.ai/api/paas/v4";
-
-  if (envKey) {
-    return { apiKey: envKey, baseUrl: envUrl };
-  }
-
-  // 2-3. Читаем файлы конфигурации (песочница, локальная разработка)
-  try {
-    const configPaths = [
-      "/etc/.z-ai-config",
-      path.join(process.cwd(), ".z-ai-config"),
-    ];
-
-    for (const filePath of configPaths) {
-      try {
-        if (fs.existsSync(filePath)) {
-          const configStr = fs.readFileSync(filePath, "utf-8");
-          const config = JSON.parse(configStr);
-          if (config.baseUrl && config.apiKey) {
-            return {
-              apiKey: config.apiKey,
-              baseUrl: config.baseUrl,
-              token: config.token,
-              chatId: config.chatId,
-              userId: config.userId,
-            };
-          }
-        }
-      } catch {
-        // продолжаем
-      }
-    }
-  } catch {
-    console.warn("[diagnose] fs/path not available, env vars only");
-  }
-
-  return { apiKey: "", baseUrl: envUrl };
-}
-
-/** Прямой вызов Z.ai API с таймаутом и подробным логированием */
-async function callZaiChat(
-  config: ZaiConfig,
-  systemPrompt: string,
-  userText: string
-): Promise<{ ok: true; content: string } | { ok: false; status: number; body: string }> {
-  const { apiKey, baseUrl, token, chatId, userId } = config;
-  const url = `${baseUrl}/chat/completions`;
-
-  // Список моделей по приоритету — пробуем по очереди, пока не сработает.
-  // Порядок подобран по результатам тестов на бесплатном тарифе Z.ai (2026):
-  //   glm-4.5-flash — единственная доступная на бесплатном тарифе.
-  // Остальные оставлены как fallback на случай платных тарифов.
-  // Для песочницы (internal-api.z.ai) первая модель может не работать —
-  // тогда код попробует следующие.
-  const MODELS_TO_TRY = [
-    "glm-4.5-flash",       // ⭐ работает на бесплатном тарифе
-    "glm-4.6-flash",       // новая 4.6 flash
-    "glm-4-flash-250414",  // flash с суффиксом даты
-    "glm-4-flash",         // старый алиас
-    "glm-4-air",           // более умная, но дешёвая
-    "glm-4-plus",          // плюс версия (платная)
-    "glm-4",               // базовая
-    // Песочница может использовать другие имена:
-    "glm-4-flashx",
-    "GLM-4-Flash",
-  ];
-
-  // Заголовки — общие для всех запросов
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${apiKey}`,
-    "X-Z-AI-From": "Z",  // SDK песочницы передаёт этот заголовок
-  };
-  // Песочница использует JWT-токен + идентификаторы
-  if (token) headers["X-Token"] = token;
-  if (chatId) headers["X-Chat-Id"] = chatId;
-  if (userId) headers["X-User-Id"] = userId;
-
-  let lastError: { ok: false; status: number; body: string } | null = null;
-
-  try {
-    for (const model of MODELS_TO_TRY) {
-      console.log(`[diagnose] trying model: ${model}`);
-      // Ретраи — 2 попытки на модель
-      let response: Response | null = null;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const localController = new AbortController();
-          const localTimeout = setTimeout(() => localController.abort(), 50000);
-          response = await fetch(url, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-              model,
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userText },
-              ],
-              temperature: 0.6,
-              max_tokens: 1500,
-              thinking: { type: "disabled" },
-            }),
-            signal: localController.signal,
-          });
-          clearTimeout(localTimeout);
-          break; // успех — выходим из ретрая
-        } catch (fetchErr) {
-          clearTimeout(localTimeout);
-          console.warn(`[diagnose] model ${model} attempt ${attempt + 1} failed:`, (fetchErr as Error).name);
-          if (attempt === 1) {
-            // Последняя попытка — передаём ошибку
-            if ((fetchErr as Error).name === "AbortError") {
-              return { ok: false, status: 504, body: "Превышено время ожидания ИИ. Попробуйте ещё раз." };
-            }
-            throw fetchErr;
-          }
-          // Ждём 2 сек перед ретраем
-          await new Promise(r => setTimeout(r, 2000));
-        }
-      }
-
-      if (!response) continue;
-      const bodyText = await response.text();
-
-      if (response.ok) {
-        let data: unknown;
-        try {
-          data = JSON.parse(bodyText);
-        } catch {
-          console.error("[diagnose] Z.ai response not JSON:", bodyText.slice(0, 500));
-          return { ok: false, status: 502, body: "Invalid JSON from Z.ai" };
-        }
-
-        // Z.ai GLM-4.5-flash может вернуть основной ответ в content,
-        // а рассуждения — в reasoning_content. Если content пустой,
-        // но есть reasoning_content — берём его (там тоже может быть JSON).
-        const message =
-          (data as { choices?: { message?: { content?: string; reasoning_content?: string } }[] })
-            ?.choices?.[0]?.message ?? {};
-        const content = message.content || message.reasoning_content || "";
-
-        if (content) {
-          console.log(
-            `[diagnose] success with model: ${model}, content length: ${content.length}, ` +
-              `source: ${message.content ? "content" : "reasoning_content"}`
-          );
-          return { ok: true, content };
-        }
-
-        // Пустой content — пробуем следующую модель
-        console.warn(`[diagnose] model ${model} returned empty content, trying next`);
-        lastError = { ok: false, status: 502, body: `Empty content (model: ${model})` };
-        continue;
-      }
-
-      // Если ошибка не связана с моделью — выходим сразу
-      const isModelError =
-        response.status === 400 &&
-        (bodyText.includes("Unknown Model") ||
-          bodyText.includes("model") ||
-          bodyText.includes("Model"));
-
-      if (isModelError) {
-        console.warn(`[diagnose] model ${model} not available: ${bodyText.slice(0, 200)}`);
-        lastError = { ok: false, status: response.status, body: bodyText };
-        continue;
-      }
-
-      // Любая другая ошибка — возвращаем её сразу
-      console.error(
-        `[diagnose] Z.ai API error: status=${response.status} body=${bodyText.slice(0, 500)}`
-      );
-      return { ok: false, status: response.status, body: bodyText };
-    }
-
-    // Все модели не сработали
-    return (
-      lastError ?? { ok: false, status: 502, body: "All models failed" }
-    );
-  } catch (err) {
-    console.error("[diagnose] callZaiChat error:", err);
-    if ((err as Error).name === "AbortError") {
-      return { ok: false, status: 504, body: "Превышено время ожидания. Попробуйте ещё раз." };
-    }
-    return { ok: false, status: 502, body: (err as Error).message || "Ошибка соединения" };
-  }
-}
-
-/** Безопасный парсинг JSON-ответа LLM — модель иногда оборачивает в ```json */
-function extractJson(raw: string): unknown {
-  let text = raw.trim();
-  if (text.startsWith("```")) {
-    text = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-  }
-  const first = text.indexOf("{");
-  const last = text.lastIndexOf("}");
-  if (first === -1 || last === -1 || last <= first) {
-    throw new Error("В ответе LLM нет валидного JSON-объекта");
-  }
-  return JSON.parse(text.slice(first, last + 1));
-}
+export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 function validateDiagnosis(d: unknown): DiagnoseResponse {
   if (!d || typeof d !== "object") throw new Error("Ответ не объект");
@@ -277,8 +54,6 @@ function validateDiagnosis(d: unknown): DiagnoseResponse {
     };
   }
 
-  // Бытийность (геометрия сознания) — опциональное поле.
-  // Если LLM не вернул — null, UI это обработает.
   let beingness: DiagnoseResponse["beingness"] | null = null;
   const bo = obj.beingness as Record<string, unknown> | undefined;
   if (bo && typeof bo === "object" && bo.id) {
@@ -322,7 +97,8 @@ function validateDiagnosis(d: unknown): DiagnoseResponse {
         id: eo.id as string,
         name: String(eo.name ?? ""),
         intensity:
-          (eo.intensity as DiagnoseResponse["emotions"][number]["intensity"]) ?? "средняя",
+          (eo.intensity as DiagnoseResponse["emotions"][number]["intensity"]) ??
+          "средняя",
         evidence: String(eo.evidence ?? ""),
       };
     }),
@@ -340,7 +116,6 @@ export async function POST(req: NextRequest) {
     const text = typeof body?.text === "string" ? body.text.trim() : "";
     const lang = body?.lang === "en" ? "en" : "ru";
 
-    // Добавляем языковую инструкцию к промпту
     const langInstruction =
       lang === "en"
         ? "\n\nВАЖНО: Весь диагноз и все тексты в JSON должны быть на АНГЛИЙСКОМ языке. " +
@@ -367,7 +142,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "На Vercel не задана переменная окружения ZAI_API_KEY. Откройте Vercel → ваш проект → Settings → Environment Variables → добавьте ZAI_API_KEY с вашим ключом от https://z.ai → затем Deployments → Redeploy.",
+            "На Vercel не задана переменная окружения ZAI_API_KEY. Откройте Vercel → ваш проект → Settings → Environment Variables → добавьте ZAI_API_KEY.",
           env_detected: {
             ZAI_API_KEY: process.env.ZAI_API_KEY ? "✓ set" : "✗ missing",
             Z_AI_API_KEY: process.env.Z_AI_API_KEY ? "✓ set" : "✗ missing",
@@ -379,98 +154,48 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(
-      `[diagnose] start: text_length=${text.length}, key_length=${config.apiKey.length}, url=${config.baseUrl}, has_token=${!!config.token}`
+      `[diagnose-edge] start: text_length=${text.length}, key_length=${config.apiKey.length}`
     );
 
-    const result = await callZaiChat(config, SYSTEM_PROMPT + langInstruction, text);
+    const result = await callZaiChatEdge(
+      config,
+      SYSTEM_PROMPT + langInstruction,
+      text,
+      { temperature: 0.6, maxTokens: 1500 }
+    );
 
     if (!result.ok) {
-      // Чёткое сообщение об ошибке авторизации
-      if (result.status === 401) {
-        return NextResponse.json(
-          {
-            error:
-              "Ключ Z.ai невалиден или истёк (401 Unauthorized). Создайте новый на https://z.ai/manage/apikey и обновите переменную ZAI_API_KEY в Vercel.",
-            zai_status: result.status,
-            zai_body: result.body.slice(0, 300),
-          },
-          { status: 502 }
-        );
-      }
-      if (result.status === 403) {
-        return NextResponse.json(
-          {
-            error:
-              "Доступ к Z.ai API запрещён (403). Проверьте, что у ключа есть права на chat completions и аккаунт активен.",
-            zai_status: result.status,
-            zai_body: result.body.slice(0, 300),
-          },
-          { status: 502 }
-        );
-      }
-      if (result.status === 429) {
-        return NextResponse.json(
-          {
-            error:
-              "Превышен лимит запросов к Z.ai (429). Подождите минуту или пополните баланс на https://z.ai.",
-            zai_status: result.status,
-            zai_body: result.body.slice(0, 300),
-          },
-          { status: 502 }
-        );
-      }
-      // 504 — таймаут
-      if (result.status === 504) {
-        return NextResponse.json(
-          { error: result.body || "Превышено время ожидания. Попробуйте ещё раз." },
-          { status: 504 }
-        );
-      }
+      return handleZaiError(result, NextResponse);
+    }
+
+    console.log(`[diagnose-edge] got content, length=${result.content.length}`);
+
+    try {
+      const parsed = validateDiagnosis(extractJson(result.content));
+      console.log("[diagnose-edge] success");
+      return NextResponse.json(parsed);
+    } catch (e) {
+      console.error(
+        "[diagnose-edge] parse error:",
+        (e as Error).message,
+        "\nraw:",
+        result.content.slice(0, 500)
+      );
       return NextResponse.json(
         {
-          error: `Ошибка ${result.status}. Попробуйте ещё раз.`,
-          zai_status: result.status,
-          zai_body: result.body.slice(0, 500),
+          error:
+            "Не удалось разобрать диагноз ИИ. Попробуйте переформулировать или повторить.",
+          raw_preview: result.content.slice(0, 400),
         },
         { status: 502 }
       );
     }
-
-    console.log(`[diagnose] got content, length=${result.content.length}`);
-
-    return processRawResponse(result.content);
   } catch (err) {
-    console.error("[diagnose] fatal:", err);
+    console.error("[diagnose-edge] fatal:", err);
     const msg = (err as Error)?.message ?? "Unknown error";
     return NextResponse.json(
       { error: "Сервис недоступен. " + msg },
       { status: 500 }
     );
   }
-}
-
-/** Общая логика парсинга raw-ответа LLM в DiagnoseResponse */
-function processRawResponse(raw: string) {
-  let parsed: DiagnoseResponse;
-  try {
-    parsed = validateDiagnosis(extractJson(raw));
-  } catch (e) {
-    console.error(
-      "[diagnose] parse error:",
-      (e as Error).message,
-      "\nraw:",
-      raw.slice(0, 500)
-    );
-    return NextResponse.json(
-      {
-        error:
-          "Не удалось разобрать диагноз ИИ. Попробуйте переформулировать или повторить.",
-        raw_preview: raw.slice(0, 400),
-      },
-      { status: 502 }
-    );
-  }
-
-  console.log("[diagnose] success");
-  return NextResponse.json(parsed);
 }
