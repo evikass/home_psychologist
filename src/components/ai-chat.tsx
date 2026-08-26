@@ -1,5 +1,5 @@
 "use client";
-import { buildApiUrl } from "@/lib/api-config";
+import { safeJsonFetch } from "@/lib/api-config";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -84,7 +84,7 @@ export function AiChat({
       setLoading(true);
 
       try {
-        const res = await fetch(buildApiUrl("/api/chat"), {
+        const result = await safeJsonFetch<{ content: string }>("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -97,14 +97,13 @@ export function AiChat({
           }),
         });
 
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Не удалось получить ответ.");
+        if (!result.ok) {
+          throw new Error(result.error || "Не удалось получить ответ.");
         }
 
         const assistantMessage: ChatMessage = {
           role: "assistant",
-          content: data.content,
+          content: result.data.content,
           timestamp: Date.now(),
         };
         setMessages((prev) => [...prev, assistantMessage]);

@@ -47,7 +47,7 @@ import { MentorsPanel } from "@/components/mentors-panel";
 import { useRole } from "@/components/role-provider";
 import { AdminActivityPanel } from "@/components/admin-activity-panel";
 import { trackActivity, useActivityTracker } from "@/lib/activity-tracker";
-import { buildApiUrl } from "@/lib/api-config";
+import { safeJsonFetch } from "@/lib/api-config";
 import { useIsVK, useVKUser } from "@/components/vk-bridge-provider";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
@@ -167,14 +167,13 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        const res = await fetch(buildApiUrl("/api/card-diagnose"), {
+        const result = await safeJsonFetch<CardDiagnosis>("/api/card-diagnose", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "Не удалось подобрать карту.");
-        setCardResult(data as CardDiagnosis);
+        if (!result.ok) throw new Error(result.error);
+        setCardResult(result.data);
         trackActivity("card", "Метафорические карты");
         return;
       }
@@ -186,16 +185,15 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        const res = await fetch(buildApiUrl("/api/tale-diagnose"), {
+        const result = await safeJsonFetch<TaleDiagnosis>("/api/tale-diagnose", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
         });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Не удалось получить сказку.");
+        if (!result.ok) {
+          throw new Error(result.error);
         }
-        setTaleResult(data as TaleDiagnosis);
+        setTaleResult(result.data);
         trackActivity("tale", "Сказкотерапия");
         return;
       }
@@ -207,16 +205,15 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        const res = await fetch(buildApiUrl("/api/neuro-diagnose"), {
+        const result = await safeJsonFetch<NeuroDiagnosis>("/api/neuro-diagnose", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
         });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Не удалось получить нейро-диагноз.");
+        if (!result.ok) {
+          throw new Error(result.error);
         }
-        setNeuroResult(data as NeuroDiagnosis);
+        setNeuroResult(result.data);
         trackActivity("neuro", "Нейро-диагноз");
         return;
       }
@@ -235,22 +232,15 @@ export default function Home() {
         return;
       }
 
-      const res = await fetch(buildApiUrl("/api/diagnose"), {
+      const result = await safeJsonFetch<DiagnoseResponse>("/api/diagnose", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, lang }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        // Если есть детальная информация об env-переменных — показываем её
-        const envInfo = data?.env_detected
-          ? `\n\nСостояние переменных:\n${Object.entries(data.env_detected)
-              .map(([k, v]) => `  ${k}: ${v}`)
-              .join("\n")}\n\nПодробнее: /api/debug-env`
-          : "";
-        throw new Error((data?.error || "Не удалось получить диагноз.") + envInfo);
+      if (!result.ok) {
+        throw new Error(result.error || "Не удалось получить диагноз.");
       }
-      const finalResult = data as DiagnoseResponse;
+      const finalResult = result.data;
       setResult(finalResult);
         trackActivity("diagnosis", "Стандартный диагноз");
       setCurrentDoneProcessings([]);

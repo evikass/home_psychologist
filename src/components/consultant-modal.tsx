@@ -1,5 +1,5 @@
 "use client";
-import { buildApiUrl } from "@/lib/api-config";
+import { safeJsonFetch } from "@/lib/api-config";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -199,7 +199,7 @@ function AiConsultantTab() {
       setLoading(true);
 
       try {
-        const res = await fetch(buildApiUrl("/api/consultant-chat"), {
+        const result = await safeJsonFetch<{ content: string }>("/api/consultant-chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -209,15 +209,14 @@ function AiConsultantTab() {
             })),
           }),
         });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Не удалось получить ответ.");
+        if (!result.ok) {
+          throw new Error(result.error || "Не удалось получить ответ.");
         }
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: data.content,
+            content: result.data.content,
             timestamp: Date.now(),
           },
         ]);

@@ -87,50 +87,69 @@ export async function callZaiMessagesEdge(
 
   let lastError: { ok: false; status: number; body: string } | null = null;
 
+  // Время, когда мы начали — чтобы не превышать 24 сек (Edge лимит 25 сек)
+  const startedAt = Date.now();
+  const EDGE_HARD_LIMIT_MS = 24000;
+
   try {
     for (const model of MODELS_TO_TRY) {
-      console.log(`[zai-edge] trying model: ${model}`);
+      // Сколько времени осталось до Edge-лимита?
+      const elapsed = Date.now() - startedAt;
+      const remaining = EDGE_HARD_LIMIT_MS - elapsed;
+
+      // Если осталось меньше 5 сек — не пытаемся (Z.ai всё равно не успеет)
+      if (remaining < 5000) {
+        console.warn(`[zai-edge] EDGE_LIMIT_REACHED: ${elapsed}ms elapsed, stopping model loop`);
+        break;
+      }
+
+      // Таймаут на эту попытку — min(20 сек, remaining - 2 сек запаса)
+      // НЕТ ретраев! На Edge 25 сек — одна попытка на модель, иначе превысим лимит
+      const timeoutForThisAttempt = Math.min(20000, remaining - 2000);
+
+      console.log(`[zai-edge] trying model: ${model}, timeout: ${timeoutForThisAttempt}ms, elapsed: ${elapsed}ms`);
 
       let response: Response | null = null;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const localController = new AbortController();
-          // 22 сек таймаут — оставляем 3 сек запаса до Edge 25s лимита
-          const localTimeout = setTimeout(
-            () => localController.abort(),
-            22000
-          );
-          response = await fetch(url, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-              model,
-              messages,
-              temperature,
-              max_tokens: maxTokens,
-              thinking: { type: "disabled" },
-            }),
-            signal: localController.signal,
-          });
-          clearTimeout(localTimeout);
-          break;
-        } catch (fetchErr) {
-          console.warn(
-            `[zai-edge] model ${model} attempt ${attempt + 1} failed:`,
-            (fetchErr as Error).name
-          );
-          if (attempt === 1) {
-            if ((fetchErr as Error).name === "AbortError") {
-              return {
-                ok: false,
-                status: 504,
-                body: "Превышено время ожидания ИИ. Попробуйте ещё раз.",
-              };
-            }
-            throw fetchErr;
-          }
-          await new Promise((r) => setTimeout(r, 1500));
+      try {
+        const localController = new AbortController();
+        const localTimeout = setTimeout(
+          () => localController.abort(),
+          timeoutForThisAttempt
+        );
+        response = await fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature,
+            max_tokens: maxTokens,
+            thinking: { type: "disabled" },
+          }),
+          signal: localController.signal,
+        });
+        clearTimeout(localTimeout);
+      } catch (fetchErr) {
+        console.warn(
+          `[zai-edge] model ${model} failed:`,
+          (fetchErr as Error).name
+        );
+        if ((fetchErr as Error).name === "AbortError") {
+          lastError = {
+            ok: false,
+            status: 504,
+            body: "Превышено время ожидания ИИ. Попробуйте ещё раз.",
+          };
+          // Не ретраим — времени мало. Пробуем следующую модель (она быстрее?)
+          continue;
         }
+        // Сетевая ошибка — пробуем следующую модель
+        lastError = {
+          ok: false,
+          status: 502,
+          body: (fetchErr as Error).message || "Сетевая ошибка",
+        };
+        continue;
       }
 
       if (!response) continue;

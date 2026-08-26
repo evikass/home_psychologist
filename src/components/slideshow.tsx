@@ -1,5 +1,5 @@
 "use client";
-import { buildApiUrl } from "@/lib/api-config";
+import { safeJsonFetch } from "@/lib/api-config";
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -201,14 +201,13 @@ export function SlideShowLoader({ text, onComplete }: { text: string; onComplete
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(buildApiUrl("/api/slide-create"), {
+      const result = await safeJsonFetch<SlideStory>("/api/slide-create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Ошибка.");
-      onComplete(data as SlideStory);
+      if (!result.ok) throw new Error(result.error || "Ошибка.");
+      onComplete(result.data);
     } catch (e) {
       setError((e as Error).message);
       toast.error((e as Error).message);
