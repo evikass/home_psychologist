@@ -1,4 +1,5 @@
 "use client";
+import { buildApiUrl } from "@/lib/api-config";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -83,7 +84,7 @@ export function AiChat({
       setLoading(true);
 
       try {
-        const res = await fetch("/api/chat", {
+        const res = await fetch(buildApiUrl("/api/chat"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

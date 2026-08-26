@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { buildApiUrl } from "@/lib/api-config";
 
 /**
  * Система трекинга активности через серверную базу данных.
@@ -31,7 +32,7 @@ export type ActivityStats = {
 /** Записать событие на сервер */
 export function trackActivity(type: string, label: string, details?: string) {
   try {
-    fetch("/api/activity", {
+    fetch(buildApiUrl("/api/activity"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type, label, details }),
@@ -49,7 +50,7 @@ export function useActivityTracker() {
 /** Получить статистику с сервера (для админа) */
 export async function fetchActivityStats(): Promise<ActivityStats | null> {
   try {
-    const res = await fetch("/api/activity?limit=200");
+    const res = await fetch(buildApiUrl("/api/activity?limit=200"));
     if (!res.ok) return null;
     return (await res.json()) as ActivityStats;
   } catch {

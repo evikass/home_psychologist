@@ -1,4 +1,5 @@
 "use client";
+import { buildApiUrl } from "@/lib/api-config";
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -200,7 +201,7 @@ export function SlideShowLoader({ text, onComplete }: { text: string; onComplete
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/slide-create", {
+      const res = await fetch(buildApiUrl("/api/slide-create"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),

@@ -47,6 +47,7 @@ import { MentorsPanel } from "@/components/mentors-panel";
 import { useRole } from "@/components/role-provider";
 import { AdminActivityPanel } from "@/components/admin-activity-panel";
 import { trackActivity, useActivityTracker } from "@/lib/activity-tracker";
+import { buildApiUrl } from "@/lib/api-config";
 import { useIsVK, useVKUser } from "@/components/vk-bridge-provider";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
@@ -166,7 +167,7 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        const res = await fetch("/api/card-diagnose", {
+        const res = await fetch(buildApiUrl("/api/card-diagnose"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
@@ -185,7 +186,7 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        const res = await fetch("/api/tale-diagnose", {
+        const res = await fetch(buildApiUrl("/api/tale-diagnose"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
@@ -206,7 +207,7 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        const res = await fetch("/api/neuro-diagnose", {
+        const res = await fetch(buildApiUrl("/api/neuro-diagnose"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
@@ -234,7 +235,7 @@ export default function Home() {
         return;
       }
 
-      const res = await fetch("/api/diagnose", {
+      const res = await fetch(buildApiUrl("/api/diagnose"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, lang }),

@@ -1,4 +1,5 @@
 "use client";
+import { buildApiUrl } from "@/lib/api-config";
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -81,7 +82,7 @@ export function ClientsPanel({
   const loadClients = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/clients");
+      const res = await fetch(buildApiUrl("/api/clients"));
       const data = await res.json();
       if (res.ok) {
         setClients(data);
@@ -101,7 +102,7 @@ export function ClientsPanel({
 
   const handleAdd = async (data: Partial<Client>) => {
     try {
-      const res = await fetch("/api/clients", {
+      const res = await fetch(buildApiUrl("/api/clients"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

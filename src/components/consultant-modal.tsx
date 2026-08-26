@@ -1,4 +1,5 @@
 "use client";
+import { buildApiUrl } from "@/lib/api-config";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -198,7 +199,7 @@ function AiConsultantTab() {
       setLoading(true);
 
       try {
-        const res = await fetch("/api/consultant-chat", {
+        const res = await fetch(buildApiUrl("/api/consultant-chat"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
