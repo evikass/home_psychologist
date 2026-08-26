@@ -11,7 +11,8 @@ import {
 } from "@/lib/masterkit-prompt";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 60
+export const dynamic = "force-dynamic";
 
 /**
  * Создаёт клиент Z.ai.
@@ -88,8 +89,6 @@ async function callZaiChat(
 ): Promise<{ ok: true; content: string } | { ok: false; status: number; body: string }> {
   const { apiKey, baseUrl, token, chatId, userId } = config;
   const url = `${baseUrl}/chat/completions`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45000); // 45 сек таймаут
 
   // Список моделей по приоритету — пробуем по очереди, пока не сработает.
   // Порядок подобран по результатам тестов на бесплатном тарифе Z.ai (2026):
@@ -126,22 +125,45 @@ async function callZaiChat(
   try {
     for (const model of MODELS_TO_TRY) {
       console.log(`[diagnose] trying model: ${model}`);
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userText },
-          ],
-          temperature: 0.6,
-          max_tokens: 2000,
-          thinking: { type: "disabled" },
-        }),
-        signal: controller.signal,
-      });
+      // Ретраи — 2 попытки на модель
+      let response: Response | null = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const localController = new AbortController();
+          const localTimeout = setTimeout(() => localController.abort(), 50000);
+          response = await fetch(url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userText },
+              ],
+              temperature: 0.6,
+              max_tokens: 2000,
+              thinking: { type: "disabled" },
+            }),
+            signal: localController.signal,
+          });
+          clearTimeout(localTimeout);
+          break; // успех — выходим из ретрая
+        } catch (fetchErr) {
+          clearTimeout(localTimeout);
+          console.warn(`[diagnose] model ${model} attempt ${attempt + 1} failed:`, (fetchErr as Error).name);
+          if (attempt === 1) {
+            // Последняя попытка — передаём ошибку
+            if ((fetchErr as Error).name === "AbortError") {
+              return { ok: false, status: 504, body: "Превышено время ожидания ИИ. Попробуйте ещё раз." };
+            }
+            throw fetchErr;
+          }
+          // Ждём 2 сек перед ретраем
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
 
+      if (!response) continue;
       const bodyText = await response.text();
 
       if (response.ok) {
@@ -199,8 +221,12 @@ async function callZaiChat(
     return (
       lastError ?? { ok: false, status: 502, body: "All models failed" }
     );
-  } finally {
-    clearTimeout(timeout);
+  } catch (err) {
+    console.error("[diagnose] callZaiChat error:", err);
+    if ((err as Error).name === "AbortError") {
+      return { ok: false, status: 504, body: "Превышено время ожидания. Попробуйте ещё раз." };
+    }
+    return { ok: false, status: 502, body: (err as Error).message || "Ошибка соединения" };
   }
 }
 
@@ -393,9 +419,16 @@ export async function POST(req: NextRequest) {
           { status: 502 }
         );
       }
+      // 504 — таймаут
+      if (result.status === 504) {
+        return NextResponse.json(
+          { error: result.body || "Превышено время ожидания. Попробуйте ещё раз." },
+          { status: 504 }
+        );
+      }
       return NextResponse.json(
         {
-          error: `Z.ai API вернул ошибку ${result.status}. Проверьте Vercel Logs.`,
+          error: `Ошибка ${result.status}. Попробуйте ещё раз.`,
           zai_status: result.status,
           zai_body: result.body.slice(0, 500),
         },

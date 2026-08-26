@@ -4,7 +4,8 @@ import path from "path";
 import { MIPS_LEVELS, BRAINWAVE_STATES, NEURO_TECHNIQUES } from "@/lib/neurotransforming-data";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 60
+export const dynamic = "force-dynamic";
 
 type ZaiConfig = {
   apiKey: string;
@@ -284,7 +285,7 @@ export async function POST(req: NextRequest) {
     for (const model of MODELS_TO_TRY) {
       console.log(`[neuro-diagnose] trying model: ${model}`);
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
+      const timeout = setTimeout(() => controller.abort(), 55000);
 
       try {
         const response = await fetch(url, {

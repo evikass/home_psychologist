@@ -3,7 +3,8 @@ import fs from "fs";
 import path from "path";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 60
+export const dynamic = "force-dynamic";
 
 type ZaiConfig = { apiKey: string; baseUrl: string; token?: string; chatId?: string; userId?: string; };
 
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
     const MODELS = ["glm-4.5-flash", "glm-4.6-flash", "glm-4-flash-250414", "glm-4-flash", "glm-4-air", "glm-4-plus", "glm-4"];
     for (const model of MODELS) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
+      const timeout = setTimeout(() => controller.abort(), 55000);
       try {
         const response = await fetch(url, {
           method: "POST", headers,

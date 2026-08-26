@@ -4,7 +4,8 @@ import path from "path";
 import { METAPHOR_CARDS } from "@/lib/metaphor-cards-data";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 60
+export const dynamic = "force-dynamic";
 
 type ZaiConfig = {
   apiKey: string;
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest) {
     for (const model of MODELS) {
       console.log(`[card-diagnose] trying: ${model}`);
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
+      const timeout = setTimeout(() => controller.abort(), 55000);
       try {
         const response = await fetch(url, {
           method: "POST", headers,
