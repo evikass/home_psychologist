@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { TALES } from "@/lib/tale-therapy-data";
 import {
   getZaiConfig,
-  callZaiChatEdge,
+  callZaiChat,
   extractJson,
   handleZaiError,
-} from "@/lib/zai-edge";
+} from "@/lib/zai-helper";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 const SYSTEM_PROMPT = `Ты — сказкотерапевт. Твоя задача — проанализировать ситуацию человека и:
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Ключ Z.ai не настроен." }, { status: 500 });
     }
 
-    const result = await callZaiChatEdge(config, SYSTEM_PROMPT, text, {
+    const result = await callZaiChat(config, SYSTEM_PROMPT, text, {
       temperature: 0.8,
       maxTokens: 1500,
     });

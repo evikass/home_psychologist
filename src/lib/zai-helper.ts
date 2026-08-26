@@ -1,11 +1,17 @@
 /**
- * Edge-совместимый клиент Z.ai.
+ * Универсальный клиент Z.ai — работает и на Node.js, и на Edge runtime.
  *
- * Используется во всех API-роутах, чтобы:
- *   - Получить таймаут 25 сек (вместо 10 сек на Node.js Serverless Hobby)
- *   - Не зависеть от fs/path (только env-переменные)
- *   - Идентичную логику ретраев и обработки моделей во всех роутах
+ * Стратегия:
+ *   - На Node.js (Vercel Hobby): maxDuration = 60, ретраи 2× на модель, таймаут 50 сек
+ *   - На Edge: maxDuration = 25, без ретраев, таймаут 22 сек
+ *
+ * Источник конфигурации:
+ *   1. Env-переменные (Vercel, любой runtime)
+ *   2. /etc/.z-ai-config (песочница, локальная разработка, только Node.js)
+ *   3. ./.z-ai-config (альтернативная локальная разработка, только Node.js)
  */
+
+import type { NextResponse } from "next/server";
 
 export type ZaiConfig = {
   apiKey: string;
@@ -30,6 +36,38 @@ export function getZaiConfig(): ZaiConfig {
     return { apiKey: envKey, baseUrl: envUrl };
   }
 
+  // Fallback: файлы конфигурации (только на Node.js runtime)
+  try {
+    // Динамический import — на Edge выбросит ошибку, но мы её подавляем
+    const fs = require("fs");
+    const path = require("path");
+    const configPaths = [
+      "/etc/.z-ai-config",
+      path.join(process.cwd(), ".z-ai-config"),
+    ];
+    for (const filePath of configPaths) {
+      try {
+        if (fs.existsSync(filePath)) {
+          const configStr = fs.readFileSync(filePath, "utf-8");
+          const config = JSON.parse(configStr);
+          if (config.baseUrl && config.apiKey) {
+            return {
+              apiKey: config.apiKey,
+              baseUrl: config.baseUrl,
+              token: config.token,
+              chatId: config.chatId,
+              userId: config.userId,
+            };
+          }
+        }
+      } catch {
+        // продолжаем
+      }
+    }
+  } catch {
+    // На Edge runtime require("fs") не сработает — это нормально
+  }
+
   return { apiKey: "", baseUrl: envUrl };
 }
 
@@ -48,16 +86,15 @@ export type ZaiResult =
   | { ok: false; status: number; body: string };
 
 /**
- * Вызывает Z.ai chat completions с ретраями и фолбэком по моделям.
- * Таймаут — 22 сек (оставляем 3 сек запаса до Edge 25s лимита).
+ * Простая версия: systemPrompt + userText.
  */
-export async function callZaiChatEdge(
+export async function callZaiChat(
   config: ZaiConfig,
   systemPrompt: string,
   userText: string,
   options?: { temperature?: number; maxTokens?: number }
 ): Promise<ZaiResult> {
-  return callZaiMessagesEdge(config, [
+  return callZaiMessages(config, [
     { role: "system", content: systemPrompt },
     { role: "user", content: userText },
   ], options);
@@ -65,16 +102,28 @@ export async function callZaiChatEdge(
 
 /**
  * Расширенная версия: принимает произвольный массив сообщений (для чата).
+ *
+ * Логика:
+ *   - Ретраи: 2 попытки на модель (на Edge можно отключить через options.noRetries)
+ *   - Таймаут: 50 сек по умолчанию (Node.js), 22 сек на Edge
+ *   - Фолбэк по моделям: если 400 + "Unknown Model", пробуем следующую
  */
-export async function callZaiMessagesEdge(
+export async function callZaiMessages(
   config: ZaiConfig,
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-  options?: { temperature?: number; maxTokens?: number }
+  options?: {
+    temperature?: number;
+    maxTokens?: number;
+    timeoutMs?: number;
+    noRetries?: boolean;
+  }
 ): Promise<ZaiResult> {
   const { apiKey, baseUrl, token, chatId, userId } = config;
   const url = `${baseUrl}/chat/completions`;
   const temperature = options?.temperature ?? 0.7;
   const maxTokens = options?.maxTokens ?? 1500;
+  const timeoutMs = options?.timeoutMs ?? 50000;
+  const maxAttempts = options?.noRetries ? 1 : 2;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -87,69 +136,56 @@ export async function callZaiMessagesEdge(
 
   let lastError: { ok: false; status: number; body: string } | null = null;
 
-  // Время, когда мы начали — чтобы не превышать 24 сек (Edge лимит 25 сек)
-  const startedAt = Date.now();
-  const EDGE_HARD_LIMIT_MS = 24000;
-
   try {
     for (const model of MODELS_TO_TRY) {
-      // Сколько времени осталось до Edge-лимита?
-      const elapsed = Date.now() - startedAt;
-      const remaining = EDGE_HARD_LIMIT_MS - elapsed;
-
-      // Если осталось меньше 5 сек — не пытаемся (Z.ai всё равно не успеет)
-      if (remaining < 5000) {
-        console.warn(`[zai-edge] EDGE_LIMIT_REACHED: ${elapsed}ms elapsed, stopping model loop`);
-        break;
-      }
-
-      // Таймаут на эту попытку — min(20 сек, remaining - 2 сек запаса)
-      // НЕТ ретраев! На Edge 25 сек — одна попытка на модель, иначе превысим лимит
-      const timeoutForThisAttempt = Math.min(20000, remaining - 2000);
-
-      console.log(`[zai-edge] trying model: ${model}, timeout: ${timeoutForThisAttempt}ms, elapsed: ${elapsed}ms`);
+      console.log(`[zai] trying model: ${model}`);
 
       let response: Response | null = null;
-      try {
-        const localController = new AbortController();
-        const localTimeout = setTimeout(
-          () => localController.abort(),
-          timeoutForThisAttempt
-        );
-        response = await fetch(url, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            model,
-            messages,
-            temperature,
-            max_tokens: maxTokens,
-            thinking: { type: "disabled" },
-          }),
-          signal: localController.signal,
-        });
-        clearTimeout(localTimeout);
-      } catch (fetchErr) {
-        console.warn(
-          `[zai-edge] model ${model} failed:`,
-          (fetchErr as Error).name
-        );
-        if ((fetchErr as Error).name === "AbortError") {
-          lastError = {
-            ok: false,
-            status: 504,
-            body: "Превышено время ожидания ИИ. Попробуйте ещё раз.",
-          };
-          // Не ретраим — времени мало. Пробуем следующую модель (она быстрее?)
-          continue;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          const localController = new AbortController();
+          const localTimeout = setTimeout(
+            () => localController.abort(),
+            timeoutMs
+          );
+          response = await fetch(url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              model,
+              messages,
+              temperature,
+              max_tokens: maxTokens,
+              thinking: { type: "disabled" },
+            }),
+            signal: localController.signal,
+          });
+          clearTimeout(localTimeout);
+          break;
+        } catch (fetchErr) {
+          console.warn(
+            `[zai] model ${model} attempt ${attempt + 1}/${maxAttempts} failed:`,
+            (fetchErr as Error).name
+          );
+          if (attempt === maxAttempts - 1) {
+            if ((fetchErr as Error).name === "AbortError") {
+              lastError = {
+                ok: false,
+                status: 504,
+                body: "Превышено время ожидания ИИ. Попробуйте ещё раз.",
+              };
+            } else {
+              lastError = {
+                ok: false,
+                status: 502,
+                body: (fetchErr as Error).message || "Сетевая ошибка",
+              };
+            }
+            continue; // пробуем следующую модель
+          }
+          // Ждём 1.5 сек перед ретраем
+          await new Promise((r) => setTimeout(r, 1500));
         }
-        // Сетевая ошибка — пробуем следующую модель
-        lastError = {
-          ok: false,
-          status: 502,
-          body: (fetchErr as Error).message || "Сетевая ошибка",
-        };
-        continue;
       }
 
       if (!response) continue;
@@ -161,7 +197,7 @@ export async function callZaiMessagesEdge(
           data = JSON.parse(bodyText);
         } catch {
           console.error(
-            "[zai-edge] Z.ai response not JSON:",
+            "[zai] Z.ai response not JSON:",
             bodyText.slice(0, 500)
           );
           return { ok: false, status: 502, body: "Invalid JSON from Z.ai" };
@@ -177,13 +213,13 @@ export async function callZaiMessagesEdge(
 
         if (content) {
           console.log(
-            `[zai-edge] success with model: ${model}, content length: ${content.length}`
+            `[zai] success with model: ${model}, content length: ${content.length}`
           );
           return { ok: true, content };
         }
 
         console.warn(
-          `[zai-edge] model ${model} returned empty content, trying next`
+          `[zai] model ${model} returned empty content, trying next`
         );
         lastError = {
           ok: false,
@@ -201,21 +237,21 @@ export async function callZaiMessagesEdge(
 
       if (isModelError) {
         console.warn(
-          `[zai-edge] model ${model} not available: ${bodyText.slice(0, 200)}`
+          `[zai] model ${model} not available: ${bodyText.slice(0, 200)}`
         );
         lastError = { ok: false, status: response.status, body: bodyText };
         continue;
       }
 
       console.error(
-        `[zai-edge] Z.ai API error: status=${response.status} body=${bodyText.slice(0, 500)}`
+        `[zai] Z.ai API error: status=${response.status} body=${bodyText.slice(0, 500)}`
       );
       return { ok: false, status: response.status, body: bodyText };
     }
 
     return lastError ?? { ok: false, status: 502, body: "All models failed" };
   } catch (err) {
-    console.error("[zai-edge] callZaiChatEdge error:", err);
+    console.error("[zai] callZaiMessages error:", err);
     if ((err as Error).name === "AbortError") {
       return {
         ok: false,
@@ -250,7 +286,6 @@ export function extractJson(raw: string): unknown {
 
 /**
  * Стандартная обработка ошибок Z.ai для возврата клиенту.
- * Возвращает NextResponse.json с понятным сообщением.
  */
 export function handleZaiError(
   result: ZaiResult,
@@ -293,7 +328,7 @@ export function handleZaiError(
       {
         error:
           result.body ||
-          "Превышено время ожидания (Edge 25s). Попробуйте ещё раз — возможно, ИИ перегружен.",
+          "Превышено время ожидания. Попробуйте ещё раз — возможно, ИИ перегружен.",
         zai_status: result.status,
       },
       { status: 504 }
@@ -308,6 +343,3 @@ export function handleZaiError(
     { status: 502 }
   );
 }
-
-// Импортируем NextResponse динамически, чтобы не ломать Edge-бандл
-import { NextResponse } from "next/server";

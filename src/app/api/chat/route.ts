@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
 import {
   getZaiConfig,
-  callZaiMessagesEdge,
+  callZaiMessages,
   handleZaiError,
-} from "@/lib/zai-edge";
+} from "@/lib/zai-helper";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 type ChatMessage = {
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
       })),
     ];
 
-    const result = await callZaiMessagesEdge(config, apiMessages, {
+    const result = await callZaiMessages(config, apiMessages, {
       temperature: 0.7,
       maxTokens: 500,
     });

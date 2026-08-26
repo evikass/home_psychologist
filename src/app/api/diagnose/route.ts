@@ -9,16 +9,17 @@ import {
 } from "@/lib/masterkit-prompt";
 import {
   getZaiConfig,
-  callZaiChatEdge,
+  callZaiChat,
   extractJson,
   handleZaiError,
-} from "@/lib/zai-edge";
+} from "@/lib/zai-helper";
 
 /**
- * EDGE RUNTIME — 25 секунд таймаут вместо 10 сек на Node.js Serverless.
- * Этого должно хватить для Z.ai GLM-4.5-flash (обычно отвечает за 5-20 сек).
+ * Node.js runtime — ретраи, до 60 сек таймаут.
+ * Ранее было Edge (25 сек) — но это вызывало 504 на проде.
  */
-export const runtime = "edge";
+export const runtime = "nodejs";
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 function validateDiagnosis(d: unknown): DiagnoseResponse {
@@ -157,7 +158,7 @@ export async function POST(req: NextRequest) {
       `[diagnose-edge] start: text_length=${text.length}, key_length=${config.apiKey.length}`
     );
 
-    const result = await callZaiChatEdge(
+    const result = await callZaiChat(
       config,
       SYSTEM_PROMPT + langInstruction,
       text,

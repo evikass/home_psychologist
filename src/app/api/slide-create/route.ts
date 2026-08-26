@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getZaiConfig,
-  callZaiChatEdge,
+  callZaiChat,
   extractJson,
   handleZaiError,
-} from "@/lib/zai-edge";
+} from "@/lib/zai-helper";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 const SYSTEM_PROMPT = `Ты — сказочник и поэт. Создай терапевтическую историю (сказку, притчу или стих) на основе ситуации человека, разбитую на сцены-слайды.
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
     const config = getZaiConfig();
     if (!config.apiKey) return NextResponse.json({ error: "Ключ Z.ai не настроен." }, { status: 500 });
 
-    const result = await callZaiChatEdge(config, SYSTEM_PROMPT, text, {
+    const result = await callZaiChat(config, SYSTEM_PROMPT, text, {
       temperature: 0.85,
       maxTokens: 1500,
     });

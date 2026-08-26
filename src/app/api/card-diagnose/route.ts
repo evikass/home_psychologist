@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { METAPHOR_CARDS } from "@/lib/metaphor-cards-data";
 import {
   getZaiConfig,
-  callZaiChatEdge,
+  callZaiChat,
   extractJson,
   handleZaiError,
-} from "@/lib/zai-edge";
+} from "@/lib/zai-helper";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 const SYSTEM_PROMPT = `Ты — метафорический картотерапевт. Твоя задача — проанализировать ситуацию человека и подобрать метафорическую карту, которая отражает его состояние и даёт ключ к выходу.
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
     const config = getZaiConfig();
     if (!config.apiKey) return NextResponse.json({ error: "Ключ Z.ai не настроен." }, { status: 500 });
 
-    const result = await callZaiChatEdge(config, SYSTEM_PROMPT, text, {
+    const result = await callZaiChat(config, SYSTEM_PROMPT, text, {
       temperature: 0.75,
       maxTokens: 1500,
     });

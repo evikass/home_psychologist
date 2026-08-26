@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { MIPS_LEVELS, BRAINWAVE_STATES, NEURO_TECHNIQUES } from "@/lib/neurotransforming-data";
 import {
   getZaiConfig,
-  callZaiChatEdge,
+  callZaiChat,
   extractJson,
   handleZaiError,
-} from "@/lib/zai-edge";
+} from "@/lib/zai-helper";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 const SYSTEM_PROMPT = `Ты — эксперт по нейротрансформингу С.В. Ковалёва.
@@ -215,7 +216,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await callZaiChatEdge(config, SYSTEM_PROMPT, text, {
+    const result = await callZaiChat(config, SYSTEM_PROMPT, text, {
       temperature: 0.7,
       maxTokens: 1500,
     });
