@@ -121,11 +121,11 @@ export async function callZaiMessages(
   const { apiKey, baseUrl, token, chatId, userId } = config;
   const url = `${baseUrl}/chat/completions`;
   const temperature = options?.temperature ?? 0.7;
-  // ВАЖНО: на Vercel проде (api.z.ai/api/paas/v4) GLM-4.5-flash ИГНОРИРУЕТ
-  // `thinking: { type: "disabled" }` и всё равно генерирует reasoning_content.
-  // reasoning_content сжирает весь max_tokens, и content остаётся пустым.
-  // Поэтому ставим max_tokens минимум 3000 — чтобы хватило и на reasoning, и на content.
-  const maxTokens = Math.max(options?.maxTokens ?? 1500, 3000);
+  // ВАЖНО: Vercel Hobby план = 10 сек лимит на serverless function.
+  // С max_tokens=3000 GLM-4.5-flash генерирует ответ 15-20 сек → Vercel убивает → 504.
+  // Поэтому возвращаемся к 1500 — этого хватит на JSON + краткий reasoning.
+  // Если content пустой, JSON извлекается из reasoning_content (см. ниже).
+  const maxTokens = options?.maxTokens ?? 1500;
   const timeoutMs = options?.timeoutMs ?? 50000;
   const maxAttempts = options?.noRetries ? 1 : 2;
 

@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     const result = await callZaiMessages(config, apiMessages, {
       temperature: 0.7,
-      maxTokens: 500,
+      maxTokens: 800,
     });
 
     if (!result.ok) {

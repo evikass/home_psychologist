@@ -77,7 +77,7 @@ export async function safeJsonFetch<T = unknown>(
       ok: false,
       error:
         response.status === 504
-          ? "Превышено время ожидания сервера (25 сек). ИИ перегружен — попробуйте ещё раз через минуту."
+          ? "Сервер не успел обработать запрос за отведённое время (10 сек — лимит Vercel Hobby). Попробуйте ещё раз."
           : `Сервер вернул пустой ответ (статус ${response.status}).`,
       status: response.status,
     };
@@ -89,7 +89,6 @@ export async function safeJsonFetch<T = unknown>(
     parsed = JSON.parse(rawText);
   } catch {
     // Не JSON — это, скорее всего, HTML-страница ошибки Vercel
-    // Проверим по характерным признакам
     const isHtml = rawText.trimStart().startsWith("<");
     const isVercelError =
       rawText.includes("An error occurred") ||
@@ -101,7 +100,7 @@ export async function safeJsonFetch<T = unknown>(
       return {
         ok: false,
         error:
-          "Превышено время ожидания ИИ (25 сек — лимит Vercel Edge). Попробуйте ещё раз — возможно, ИИ перегружен. Если ошибка повторяется, обратитесь к администратору.",
+          "Сервер не успел за 10 сек (лимит Vercel Hobby). ИИ генерирует ответ слишком долго. Попробуйте ещё раз — если ошибка повторяется, нужно перейти на Railway ($5/мес, без лимита времени).",
         status: 504,
         rawText: rawText.slice(0, 200),
       };
