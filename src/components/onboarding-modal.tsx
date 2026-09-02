@@ -353,66 +353,65 @@ function Slide4() {
   );
 }
 
-/** Слайд 5: Сообщество */
+/** Слайд 5: Принципы работы с собой */
 function Slide5() {
-  const community = ONBOARDING_DATA.community;
+  const principles = [
+    {
+      title: "Маленькие шаги",
+      text: "Не нужно больших изменений. Достаточно 5-10 минут в день на практику — и через 21 день результат чувствуется.",
+    },
+    {
+      title: "Без осуждения себя",
+      text: "Любая эмоция — это энергия. Любое состояние — нормально. Здесь нет правильного и неправильного.",
+    },
+    {
+      title: "Через тело и чувство",
+      text: "Не через анализ, а через прямое ощущение. «Где это в тебе живёт?» — главный вопрос.",
+    },
+    {
+      title: "Ты сам себе наставник",
+      text: "ИИ — это зеркало. Подсказки идут от тебя, не от внешнего авторитета. Ты — источник.",
+    },
+  ];
   return (
     <div>
       <div className="mb-5">
         <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary mb-2">
-          <Users className="h-3.5 w-3.5" />
-          Сообщество
+          <Heart className="h-3.5 w-3.5" />
+          Принципы
         </div>
         <h2 className="font-display text-2xl sm:text-3xl font-semibold leading-tight">
-          {community.title}
+          Как пользоваться
         </h2>
         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-          {community.description}
+          Несколько принципов, которые сделают работу с собой более мягкой и эффективной.
         </p>
       </div>
 
-      <ul className="space-y-1.5 mb-5">
-        {community.features.map((f, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm">
-            <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <span>{f}</span>
-          </li>
-        ))}
-      </ul>
-
-      {/* Демо-заглушки вместо внешних ссылок */}
-      <div className="space-y-2">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
-          Каналы сообщества (демо)
-        </div>
-        {community.links.map((link, i) => (
-          <button
+      <div className="space-y-3">
+        {principles.map((p, i) => (
+          <div
             key={i}
-            type="button"
-            onClick={() =>
-              toast.info("Демо: ссылка будет доступна после официального партнёрства с автором методики.", {
-                duration: 5000,
-              })
-            }
-            className="w-full flex items-center gap-3 rounded-lg border bg-card p-3 hover:border-primary/40 hover:shadow-sm transition-all group text-left"
+            className="rounded-lg border bg-card p-3"
           >
-            <ArrowRight className="h-4 w-4 text-primary shrink-0 group-hover:translate-x-1 transition-transform" />
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm flex items-center gap-2">
-                {link.label}
-                <Badge variant="outline" className="text-xs h-4 py-0 text-amber-700 border-amber-400/50 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300">
-                  демо
-                </Badge>
+            <div className="flex items-start gap-2.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold mt-0.5">
+                {i + 1}
               </div>
-              <div className="text-xs text-muted-foreground">{link.description}</div>
+              <div className="flex-1">
+                <div className="font-semibold text-sm mb-0.5">{p.title}</div>
+                <div className="text-xs text-muted-foreground leading-relaxed">
+                  {p.text}
+                </div>
+              </div>
             </div>
-          </button>
+          </div>
         ))}
       </div>
 
       <div className="mt-5 rounded-lg bg-secondary/40 p-3 text-xs text-muted-foreground italic leading-relaxed">
         <Shield className="h-3.5 w-3.5 inline-block mr-1 mb-0.5" />
-        {community.note}
+        Приложение не заменяет профессиональную психологическую помощь. В острых состояниях обратитесь к специалисту.
       </div>
     </div>
   );

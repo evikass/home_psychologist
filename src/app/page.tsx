@@ -48,7 +48,7 @@ import { useRole } from "@/components/role-provider";
 import { AdminActivityPanel } from "@/components/admin-activity-panel";
 import { trackActivity, useActivityTracker } from "@/lib/activity-tracker";
 import { safeJsonFetch } from "@/lib/api-config";
-import { useIsVK, useVKUser } from "@/components/vk-bridge-provider";
+import { useIsVK, useIsOK, useIsPlatform, useVKUser } from "@/components/vk-bridge-provider";
 import { NeurotransformingPanel } from "@/components/neurotransforming-panel";
 import { NeuroDiagnosisCard } from "@/components/neuro-diagnosis-card";
 import type { NeuroDiagnosis } from "@/lib/diagnosis-types";
@@ -131,6 +131,8 @@ export default function Home() {
   useActivityTracker();
 
   const isVK = useIsVK();
+  const isOK = useIsOK();
+  const isPlatform = useIsPlatform();
   const vkUser = useVKUser();
 
   const handleSubmit = async () => {
@@ -553,7 +555,7 @@ export default function Home() {
                 >
                   Попробовать ещё раз
                 </Button>
-                {!isVK && (
+                {!isPlatform && (
                   <a
                     href="/api/debug-env"
                     target="_blank"
@@ -1014,6 +1016,7 @@ function Header({
 function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
   const { t, lang } = useI18n();
   const isVK = useIsVK();
+  const isPlatform = useIsPlatform();
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
@@ -1026,7 +1029,7 @@ function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
           <Sparkles className="h-3 w-3 mr-1" />
           Метод самотерапии
         </Badge>
-        {IS_DEMO && !isVK && (
+        {IS_DEMO && !isPlatform && (
           <Badge
             variant="outline"
             className="mb-3 ml-2 text-xs border-amber-400/50 text-amber-700 bg-amber-50"
@@ -1046,7 +1049,7 @@ function Hero({ onPickExample }: { onPickExample: (s: string) => void }) {
           Опишите свою ситуацию своими словами — как жалобное письмо другу. ИИ
           определит уровень развития, застрявшую эмоцию, эмоциональную яму и
           подберёт точные проработки на этот момент.
-          {IS_DEMO && !isVK && (
+          {IS_DEMO && !isPlatform && (
             <span className="block mt-2 text-xs text-amber-700/90">
               ⚠️ Это демо-версия на GitHub Pages — использует предзаготовленные
               диагнозы по ключевым словам. Для живого ИИ-анализа используйте
