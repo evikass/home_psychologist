@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
 import { BEINGNESS_BY_ID, LEVELS } from "@/lib/masterkit-data";
+import { usePlatform, usePlatformUserId, useVKReady } from "@/components/vk-bridge-provider";
 
 const STORAGE_KEY = "masterkit_history_v1";
 const MAX_ENTRIES = 50;
+const SYNC_DEBOUNCE_MS = 2000; // 2 сек после последнего изменения
 
 export type HistoryEntry = {
   id: string;
@@ -17,37 +19,112 @@ export type HistoryEntry = {
 
 /**
  * Хук для сохранения и загрузки истории диагнозов.
- * Хранится в localStorage, до 50 записей.
- * Также сохраняет отметки о выполненных проработках.
+ *
+ * Хранение:
+ *   - В web (не платформа): только localStorage
+ *   - В VK/OK: localStorage + сервер /api/progress (синхронизация между устройствами)
+ *
+ * VK Rule 2.3.8: прогресс должен синхронизироваться между версиями приложения
+ * (vk.ru web → Android → iOS и т.д.).
+ *
+ * Алгоритм:
+ *   1. При загрузке: если есть platformUserId — загружаем с сервера и сливаем с локальным
+ *   2. При изменениях: debounce 2 сек → сохраняем на сервер
  */
 export function useDiagnosisHistory() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
-  // Загрузка из localStorage при монтировании.
+  const platform = usePlatform();
+  const platformUserId = usePlatformUserId();
+  const ready = useVKReady();
+
+  // Рефы для debounce-синхронизации
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSyncedHashRef = useRef<string>("");
+
+  // === Загрузка при монтировании ===
   useEffect(() => {
     let mounted = true;
-    Promise.resolve().then(() => {
+
+    async function loadHistory() {
       if (!mounted) return;
+
+      // Сначала читаем localStorage
+      let localEntries: HistoryEntry[] = [];
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw) as HistoryEntry[];
-          if (Array.isArray(parsed) && mounted) {
-            setHistory(parsed);
-          }
+          if (Array.isArray(parsed)) localEntries = parsed;
         }
       } catch (e) {
-        console.warn("[history] load error:", e);
+        console.warn("[history] local load error:", e);
       }
+
+      // Если на платформе — загружаем с сервера и сливаем
+      const shouldSync = ready && platformUserId && (platform === "vk" || platform === "ok");
+
+      if (shouldSync) {
+        setSyncing(true);
+        try {
+          const url = `/api/progress?platform=${encodeURIComponent(platform)}&userId=${encodeURIComponent(platformUserId)}`;
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json() as { entries?: HistoryEntry[] };
+            if (Array.isArray(data.entries)) {
+              // Сливаем: серверные записи + локальные, дедуплицируем по id
+              const serverEntries = data.entries;
+              const allMap = new Map<string, HistoryEntry>();
+
+              // Серверные — приоритет (т.к. это с другого устройства)
+              for (const e of serverEntries) allMap.set(e.id, e);
+              // Локальные дополняют (если их нет на сервере)
+              for (const e of localEntries) {
+                if (!allMap.has(e.id)) allMap.set(e.id, e);
+              }
+
+              // Сортируем по timestamp (новые сверху)
+              const merged = Array.from(allMap.values())
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .slice(0, MAX_ENTRIES);
+
+              if (mounted) {
+                setHistory(merged);
+                // Обновляем localStorage слитым результатом
+                try {
+                  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+                } catch {}
+                // Запоминаем хеш — чтобы не синхронизировать то же самое обратно
+                lastSyncedHashRef.current = JSON.stringify(merged);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[history] server load error:", e);
+          // Fallback: используем локальные
+          if (mounted) setHistory(localEntries);
+        } finally {
+          if (mounted) setSyncing(false);
+        }
+      } else {
+        // Не платформа — только локальные
+        if (mounted) setHistory(localEntries);
+      }
+
       if (mounted) setLoaded(true);
-    });
+    }
+
+    Promise.resolve().then(loadHistory);
+
     return () => {
       mounted = false;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, platform, platformUserId]);
 
-  // Сохранение в localStorage при изменении
+  // === Сохранение в localStorage при изменениях ===
   const persist = useCallback((entries: HistoryEntry[]) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
@@ -55,6 +132,44 @@ export function useDiagnosisHistory() {
       console.warn("[history] save error:", e);
     }
   }, []);
+
+  // === Синхронизация с сервером (debounce 2 сек) ===
+  const scheduleSync = useCallback((entries: HistoryEntry[]) => {
+    // Только для платформ
+    if (!platformUserId || (platform !== "vk" && platform !== "ok")) return;
+
+    // Сравниваем хеш — если ничего не изменилось, не синхронизируем
+    const newHash = JSON.stringify(entries);
+    if (newHash === lastSyncedHashRef.current) return;
+
+    // Очищаем предыдущий таймер
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    // Debounce 2 сек
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            platform,
+            userId: platformUserId,
+            entries,
+          }),
+        });
+        if (res.ok) {
+          lastSyncedHashRef.current = newHash;
+          console.log("[history] synced to server:", entries.length, "entries");
+        } else {
+          console.warn("[history] sync failed:", res.status);
+        }
+      } catch (e) {
+        console.warn("[history] sync error:", e);
+      }
+    }, SYNC_DEBOUNCE_MS);
+  }, [platform, platformUserId]);
 
   const addEntry = useCallback(
     (text: string, result: DiagnoseResponse) => {
@@ -67,10 +182,11 @@ export function useDiagnosisHistory() {
       setHistory((prev) => {
         const next = [entry, ...prev].slice(0, MAX_ENTRIES);
         persist(next);
+        scheduleSync(next);
         return next;
       });
     },
-    [persist]
+    [persist, scheduleSync]
   );
 
   const removeEntry = useCallback(
@@ -78,16 +194,18 @@ export function useDiagnosisHistory() {
       setHistory((prev) => {
         const next = prev.filter((e) => e.id !== id);
         persist(next);
+        scheduleSync(next);
         return next;
       });
     },
-    [persist]
+    [persist, scheduleSync]
   );
 
   const clearAll = useCallback(() => {
     setHistory([]);
     persist([]);
-  }, [persist]);
+    scheduleSync([]);
+  }, [persist, scheduleSync]);
 
   /** Отметить проработку как выполненную (или снять отметку) */
   const toggleProcessingDone = useCallback(
@@ -105,15 +223,17 @@ export function useDiagnosisHistory() {
           return { ...e, doneProcessings: Array.from(done) };
         });
         persist(next);
+        scheduleSync(next);
         return next;
       });
     },
-    [persist]
+    [persist, scheduleSync]
   );
 
   return {
     history,
     loaded,
+    syncing,
     addEntry,
     removeEntry,
     clearAll,

@@ -14,9 +14,10 @@ type PlatformType = "vk" | "ok" | "web";
 
 type VKContextType = {
   isVK: boolean;
-  isOK: boolean;          // Добавлено для Одноклассников
-  isPlatform: boolean;    // Любая платформа (VK или OK) — для скрытия демо
+  isOK: boolean;            // Добавлено для Одноклассников
+  isPlatform: boolean;      // Любая платформа (VK или OK) — для скрытия демо
   platform: PlatformType;
+  platformUserId: string | null;  // ID пользователя на платформе (для синхронизации прогресса)
   vkUser: VKUser | null;
   ready: boolean;
 };
@@ -26,6 +27,7 @@ const VKContext = createContext<VKContextType>({
   isOK: false,
   isPlatform: false,
   platform: "web",
+  platformUserId: null,
   vkUser: null,
   ready: false,
 });
@@ -46,16 +48,16 @@ export { VKContext };
  *   - apiconnection
  *   - session_key
  *
- * OK может также эмулировать VK Bridge (но не всегда), поэтому
- * проверяем и OK-параметры, и VK-параметры.
+ * OK не использует VK Bridge — работаем в "тихом" режиме.
  */
-function detectPlatform(): { platform: PlatformType; isVK: boolean; isOK: boolean } {
-  if (typeof window === "undefined") return { platform: "web", isVK: false, isOK: false };
+function detectPlatform(): { platform: PlatformType; isVK: boolean; isOK: boolean; userId: string | null } {
+  if (typeof window === "undefined") return { platform: "web", isVK: false, isOK: false, userId: null };
 
   const urlParams = new URLSearchParams(window.location.search);
 
   // VK Mini App параметры
   const hasVKParam = urlParams.has("vk_platform") || urlParams.has("vk_user_id") || urlParams.has("vk_app_id");
+  const vkUserId = urlParams.get("vk_user_id");
 
   // OK параметры
   const hasOKParam =
@@ -70,9 +72,19 @@ function detectPlatform(): { platform: PlatformType; isVK: boolean; isOK: boolea
   const isOKReferer = referrer.includes("ok.ru") || referrer.includes("odnoklassniki.ru");
   const isVKReferer = referrer.includes("vk.com") || referrer.includes("vk.ru");
 
-  if (hasVKParam || isVKReferer) return { platform: "vk", isVK: true, isOK: false };
-  if (hasOKParam || isOKReferer) return { platform: "ok", isVK: false, isOK: true };
-  return { platform: "web", isVK: false, isOK: false };
+  if (hasVKParam || isVKReferer) {
+    return { platform: "vk", isVK: true, isOK: false, userId: vkUserId };
+  }
+  if (hasOKParam || isOKReferer) {
+    // У OK нет user_id в URL напрямую — берём из apiconnection (если есть)
+    // или используем хеш signed_request как уникальный идентификатор сессии
+    const okUserId =
+      urlParams.get("viewer_id") ||
+      urlParams.get("uid") ||
+      (urlParams.get("signed_request") || "").slice(0, 32);
+    return { platform: "ok", isVK: false, isOK: true, userId: okUserId };
+  }
+  return { platform: "web", isVK: false, isOK: false, userId: null };
 }
 
 /**
@@ -87,12 +99,15 @@ function detectPlatform(): { platform: PlatformType; isVK: boolean; isOK: boolea
  * OK-режим (isOK=true):
  * - Скрыты ВСЕ внешние ссылки, демо-бейджи, монетизация
  * - OK не использует VK Bridge — работаем в "тихом" режиме
- * - Демо-блоки не показываем (модератор OK отклонял именно за них)
+ *
+ * Прогресс синхронизируется между устройствами через /api/progress:
+ *   - platformUserId используется как ключ (vk_user_id для VK, signed_request hash для OK)
  */
 export function VKBridgeProvider({ children }: { children: React.ReactNode }) {
   const [isVK, setIsVK] = useState(false);
   const [isOK, setIsOK] = useState(false);
   const [platform, setPlatform] = useState<PlatformType>("web");
+  const [platformUserId, setPlatformUserId] = useState<string | null>(null);
   const [vkUser, setVkUser] = useState<VKUser | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -112,7 +127,8 @@ export function VKBridgeProvider({ children }: { children: React.ReactNode }) {
           if (active) {
             setIsOK(true);
             setPlatform("ok");
-            console.log("[Platform] OK mode enabled");
+            setPlatformUserId(detected.userId);
+            console.log("[Platform] OK mode enabled, userId:", detected.userId);
           }
         } else if (detected.isVK) {
           // VK — инициализируем bridge
@@ -120,6 +136,8 @@ export function VKBridgeProvider({ children }: { children: React.ReactNode }) {
           try {
             bridgeAvailable = vkBridge.supports("VKWebAppInit");
           } catch {}
+
+          let finalVkUserId = detected.userId;
 
           if (bridgeAvailable) {
             try {
@@ -129,13 +147,18 @@ export function VKBridgeProvider({ children }: { children: React.ReactNode }) {
             // Бесшовная авторизация
             try {
               const user = await vkBridge.send("VKWebAppGetUserInfo", {});
-              if (active) setVkUser(user as VKUser);
+              if (active && user) {
+                setVkUser(user as VKUser);
+                finalVkUserId = String((user as VKUser).id);
+              }
             } catch {
+              // Если bridge не сработал — используем vk_user_id из URL
               const urlParams = new URLSearchParams(window.location.search);
-              const vkUserId = urlParams.get("vk_user_id");
-              if (vkUserId) {
+              const vkUserIdFromUrl = urlParams.get("vk_user_id");
+              if (vkUserIdFromUrl) {
+                finalVkUserId = vkUserIdFromUrl;
                 if (active) setVkUser({
-                  id: parseInt(vkUserId),
+                  id: parseInt(vkUserIdFromUrl),
                   first_name: "Пользователь",
                   last_name: "VK",
                 });
@@ -155,7 +178,8 @@ export function VKBridgeProvider({ children }: { children: React.ReactNode }) {
           if (active) {
             setIsVK(true);
             setPlatform("vk");
-            console.log("[Platform] VK mode enabled");
+            setPlatformUserId(finalVkUserId);
+            console.log("[Platform] VK mode enabled, userId:", finalVkUserId);
           }
         } else {
           console.log("[Platform] Web mode (not VK/OK)");
@@ -177,6 +201,7 @@ export function VKBridgeProvider({ children }: { children: React.ReactNode }) {
         isOK,
         isPlatform: isVK || isOK,
         platform,
+        platformUserId,
         vkUser,
         ready,
       }}
@@ -204,6 +229,11 @@ export function useIsPlatform() {
 /** Хук: тип платформы */
 export function usePlatform() {
   return useContext(VKContext).platform;
+}
+
+/** Хук: ID пользователя на платформе (для синхронизации прогресса) */
+export function usePlatformUserId() {
+  return useContext(VKContext).platformUserId;
 }
 
 /** Хук: данные VK пользователя */
