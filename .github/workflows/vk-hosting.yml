@@ -1,0 +1,55 @@
+name: Deploy to VK Hosting
+
+# Деплой статики в VK Mini Apps Hosting (доступен в РФ).
+# API остаётся на Vercel/Railway/VPS (см. NEXT_PUBLIC_API_URL).
+#
+# Требует секреты в GitHub:
+#   MINI_APPS_ACCESS_TOKEN — токен VK с правами vk_mini_app
+#   NEXT_PUBLIC_API_URL    — URL API сервера (Vercel/Railway/VPS)
+#
+# Инструкция по получению токена:
+#   https://dev.vk.com/ru/api/access-token/getting-started
+#   Права: offline, vk_mini_app
+#
+# VK Mini Apps Hosting: https://dev.vk.com/ru/mini-apps/development/hosting/overview
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-vk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Remove API routes (not supported in static export)
+        run: rm -rf src/app/api
+
+      - name: Build static export for VK Hosting
+        run: bun run next build
+        env:
+          STATIC_EXPORT: "true"
+          # На VK Hosting: фронтенд — статика, ИИ работает через NEXT_PUBLIC_API_URL
+          NEXT_PUBLIC_STATIC_DEMO: "false"
+          # URL API — где живёт Z.ai (Vercel, Railway, или VPS)
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+      - name: Install VK Mini Apps Deploy CLI
+        run: bun add -g @vkontakte/vk-miniapps-deploy
+
+      - name: Deploy to VK Hosting
+        env:
+          MINI_APPS_ACCESS_TOKEN: ${{ secrets.MINI_APPS_ACCESS_TOKEN }}
+          MINI_APPS_ENVIRONMENT: "production"
+        run: vk-miniapps-deploy
