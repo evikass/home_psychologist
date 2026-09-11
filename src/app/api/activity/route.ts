@@ -164,7 +164,7 @@ export async function GET() {
       actionCounts,
       devices: Array.from(devicesSet),
       browsers: Array.from(browsersSet),
-      storage: isKVAvailable() ? "Vercel KV (постоянно)" : "In-memory (временное)",
+      storage: isKVAvailable() ? "Постоянное хранилище" : "Временное хранилище",
       sessions: sessions.slice(0, 20).map((s) => ({
         browser: s.browser,
         device: s.device,

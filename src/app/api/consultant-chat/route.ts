@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const config = getZaiConfig();
     if (!config.apiKey) {
       return NextResponse.json(
-        { error: "Ключ Z.ai не настроен. AI-консультант недоступен." },
+        { error: "Консультант сейчас недоступен. Попробуйте через минуту." },
         { status: 500 }
       );
     }

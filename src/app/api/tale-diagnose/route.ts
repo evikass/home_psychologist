@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     const config = getZaiConfig();
     if (!config.apiKey) {
-      return NextResponse.json({ error: "Ключ Z.ai не настроен." }, { status: 500 });
+      return NextResponse.json({ error: "Сказочник сейчас недоступен. Попробуйте позже." }, { status: 500 });
     }
 
     const result = await callZaiChat(config, SYSTEM_PROMPT, text, {

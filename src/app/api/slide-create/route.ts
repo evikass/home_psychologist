@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     if (text.length < 20) return NextResponse.json({ error: "Опишите ситуацию подробнее." }, { status: 400 });
 
     const config = getZaiConfig();
-    if (!config.apiKey) return NextResponse.json({ error: "Ключ Z.ai не настроен." }, { status: 500 });
+    if (!config.apiKey) return NextResponse.json({ error: "Сказочник сейчас недоступен. Попробуйте позже." }, { status: 500 });
 
     const result = await callZaiChat(config, SYSTEM_PROMPT, text, {
       temperature: 0.85,

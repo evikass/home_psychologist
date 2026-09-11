@@ -143,19 +143,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "На Vercel не задана переменная окружения ZAI_API_KEY. Откройте Vercel → ваш проект → Settings → Environment Variables → добавьте ZAI_API_KEY.",
-          env_detected: {
-            ZAI_API_KEY: process.env.ZAI_API_KEY ? "✓ set" : "✗ missing",
-            Z_AI_API_KEY: process.env.Z_AI_API_KEY ? "✓ set" : "✗ missing",
-            ZAI_KEY: process.env.ZAI_KEY ? "✓ set" : "✗ missing",
-          },
+            "Психолог сейчас недоступен. Мы уже работаем над этим — попробуйте позже.",
         },
         { status: 500 }
       );
     }
 
     console.log(
-      `[diagnose-edge] start: text_length=${text.length}, key_length=${config.apiKey.length}`
+      `[diagnose] start: text_length=${text.length}, key_length=${config.apiKey.length}`
     );
 
     const result = await callZaiChat(
@@ -169,15 +164,15 @@ export async function POST(req: NextRequest) {
       return handleZaiError(result, NextResponse);
     }
 
-    console.log(`[diagnose-edge] got content, length=${result.content.length}`);
+    console.log(`[diagnose] got content, length=${result.content.length}`);
 
     try {
       const parsed = validateDiagnosis(extractJson(result.content));
-      console.log("[diagnose-edge] success");
+      console.log("[diagnose] success");
       return NextResponse.json(parsed);
     } catch (e) {
       console.error(
-        "[diagnose-edge] parse error:",
+        "[diagnose] parse error:",
         (e as Error).message,
         "\nraw:",
         result.content.slice(0, 500)
@@ -192,7 +187,7 @@ export async function POST(req: NextRequest) {
       );
     }
   } catch (err) {
-    console.error("[diagnose-edge] fatal:", err);
+    console.error("[diagnose] fatal:", err);
     const msg = (err as Error)?.message ?? "Unknown error";
     return NextResponse.json(
       { error: "Сервис недоступен. " + msg },

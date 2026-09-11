@@ -3,11 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-// Блокировка служебных эндпоинтов при открытии в VK
-function isVKRequest(req: NextRequest): boolean {
+// Блокировка служебных эндпоинтов при открытии в VK/OK (VK Rule 4.1.8)
+function isPlatformRequest(req: NextRequest): boolean {
   const referer = req.headers.get("referer") || "";
   const ua = req.headers.get("user-agent") || "";
-  return referer.includes("vk.com") || referer.includes("vk.ru") || ua.includes("VKApp");
+  return (
+    referer.includes("vk.com") ||
+    referer.includes("vk.ru") ||
+    referer.includes("ok.ru") ||
+    referer.includes("odnoklassniki.ru") ||
+    ua.includes("VKApp") ||
+    ua.includes("OKSDK") ||
+    ua.includes("Odkl")
+  );
 }
 
 /**
@@ -17,7 +25,7 @@ function isVKRequest(req: NextRequest): boolean {
  * 3. Показывает статус и тело ответа для каждой модели
  */
 export async function GET(req: NextRequest) {
-  if (isVKRequest(req)) {
+  if (isPlatformRequest(req)) {
     return NextResponse.json({ error: "Not available" }, { status: 404 });
   }
   const apiKey =
@@ -58,13 +66,13 @@ export async function GET(req: NextRequest) {
 
   if (!apiKey) {
     envStatus.diagnosis =
-      "❌ Ключ Z.ai НЕ найден в env-переменных. Добавьте ZAI_API_KEY в Vercel → Settings → Environment Variables → Redeploy.";
+      "❌ Ключ не настроен в env-переменных. Добавьте в настройки проекта.";
     envStatus.next_steps = [
-      "1. Откройте https://vercel.com/dashboard → ваш проект",
-      "2. Settings → Environment Variables",
-      "3. Добавьте: Key=ZAI_API_KEY, Value=<ваш ключ от https://z.ai>",
+      "1. Откройте настройки проекта",
+      "2. Environment Variables",
+      "3. Добавьте: Key=ZAI_API_KEY, Value=<ваш ключ>",
       "4. Отметьте Production",
-      "5. Deployments → Redeploy",
+      "5. Redeploy",
     ];
     return NextResponse.json(envStatus, { status: 200 });
   }
@@ -129,23 +137,22 @@ export async function GET(req: NextRequest) {
     envStatus.diagnosis = `✅ Ключ работает! Рабочая модель: ${workingModel}. Диагностика должна работать на главной странице.`;
   } else if (envStatus.zai_models_test.some((m) => m.status === 401)) {
     envStatus.diagnosis =
-      "❌ Ключ Z.ai невалиден (401). Создайте новый на https://z.ai/manage/apikey и обновите ZAI_API_KEY в Vercel.";
+      "❌ Ключ невалиден (401). Создайте новый и обновите в настройках проекта.";
     envStatus.next_steps = [
-      "1. Откройте https://z.ai/manage/apikey",
-      "2. Создайте новый ключ",
-      "3. Vercel → Settings → Environment Variables → ZAI_API_KEY → отредактировать",
-      "4. Вставьте новый ключ",
-      "5. Deployments → Redeploy",
+      "1. Создайте новый ключ",
+      "2. Environment Variables → ZAI_API_KEY → отредактировать",
+      "3. Вставьте новый ключ",
+      "4. Redeploy",
     ];
   } else if (envStatus.zai_models_test.some((m) => m.status === 403)) {
     envStatus.diagnosis =
-      "❌ Доступ запрещён (403). Проверьте, что аккаунт Z.ai активен и у ключа есть права.";
+      "❌ Доступ запрещён (403). Проверьте, что аккаунт активен и у ключа есть права.";
   } else if (envStatus.zai_models_test.some((m) => m.status === 429)) {
     envStatus.diagnosis =
-      "⚠️ Превышен лимит (429). Подождите минуту или пополните баланс на https://z.ai.";
+      "⚠️ Превышен лимит (429). Подождите минуту или пополните баланс.";
   } else {
     envStatus.diagnosis =
-      "❌ Ни одна модель не сработала. Смотрите детали ниже — возможно, нужно активировать модель в личном кабинете Z.ai.";
+      "❌ Ни одна модель не сработала. Смотрите детали ниже.";
   }
 
   return NextResponse.json(envStatus, { status: 200 });

@@ -70,8 +70,8 @@ function analyzeResponse(
       ok: false,
       error:
         response.status === 504
-          ? "Сервер не успел обработать запрос. Попробуйте ещё раз."
-          : `Сервер вернул пустой ответ (статус ${response.status}).`,
+          ? "Психолог задумался. Дайте ему минутку — попробуйте ещё раз."
+          : "Психолог сейчас недоступен. Попробуйте через минуту.",
     };
   }
 
@@ -80,9 +80,9 @@ function analyzeResponse(
   try {
     parsed = JSON.parse(rawText);
   } catch {
-    // Не JSON — это, скорее всего, HTML-страница ошибки Vercel
+    // Не JSON — это, скорее всего, HTML-страница ошибки сервера
     const isHtml = rawText.trimStart().startsWith("<");
-    const isVercelError =
+    const isServerError =
       rawText.includes("An error occurred") ||
       rawText.includes("Function timed out") ||
       rawText.includes("EDGE_FUNCTION") ||
@@ -92,16 +92,16 @@ function analyzeResponse(
       return {
         ok: false,
         error:
-          "Сервер не успел обработать запрос за отведённое время. Попробуйте ещё раз.",
+          "Психолог задумался надолго. Дайте ему минутку — попробуйте ещё раз.",
         rawText: rawText.slice(0, 200),
       };
     }
 
-    if (isVercelError) {
+    if (isServerError) {
       return {
         ok: false,
         error:
-          "Сервер вернул ошибку платформы. Попробуйте ещё раз через минуту.",
+          "Психолог отошёл. Мы уже зовём его — попробуйте через минуту.",
         rawText: rawText.slice(0, 200),
       };
     }
@@ -109,14 +109,14 @@ function analyzeResponse(
     if (isHtml) {
       return {
         ok: false,
-        error: `Сервер вернул HTML вместо JSON (статус ${response.status}). Попробуйте ещё раз.`,
+        error: "Психолог сейчас недоступен. Попробуйте через минуту.",
         rawText: rawText.slice(0, 200),
       };
     }
 
     return {
       ok: false,
-      error: `Неожиданный ответ сервера: ${rawText.slice(0, 150)}`,
+      error: "Психолог отошёл. Попробуйте через минуту — он скоро вернётся.",
       rawText: rawText.slice(0, 200),
     };
   }
@@ -157,8 +157,8 @@ export async function safeJsonFetch<T = unknown>(
         ok: false,
         error:
           attempt < MAX_RETRIES
-            ? "Сетевая ошибка. Повторная попытка..."
-            : "Не удалось соединиться с сервером. Проверьте интернет-соединение.",
+            ? "Психолог отошёл на секунду. Повторная попытка..."
+            : "Психолог сейчас недоступен. Попробуйте через минуту.",
         status: 0,
       };
       if (attempt < MAX_RETRIES) {
@@ -182,7 +182,7 @@ export async function safeJsonFetch<T = unknown>(
       );
       lastError = {
         ok: false,
-        error: "Сервер временно недоступен. Повторная попытка...",
+        error: "Психолог отошёл. Повторная попытка...",
         status: response.status,
         rawText: analyzed.rawText,
       };

@@ -329,7 +329,8 @@ export function extractJson(raw: string): unknown {
 }
 
 /**
- * Стандартная обработка ошибок Z.ai для возврата клиенту.
+ * Стандартная обработка ошибок для возврата клиенту.
+ * Все сообщения нейтральны — без упоминания внешних сервисов (VK Rule 4.1.8).
  */
 export function handleZaiError(
   result: ZaiResult,
@@ -339,9 +340,8 @@ export function handleZaiError(
     return res.json(
       {
         error:
-          "Ключ Z.ai невалиден или истёк (401). Создайте новый на https://z.ai/manage/apikey и обновите ZAI_API_KEY.",
+          "Сервис временно недоступен. Попробуйте обновить страницу и войти снова.",
         zai_status: result.status,
-        zai_body: result.body.slice(0, 300),
       },
       { status: 502 }
     );
@@ -349,9 +349,9 @@ export function handleZaiError(
   if (result.status === 403) {
     return res.json(
       {
-        error: "Доступ к Z.ai API запрещён (403). Проверьте права ключа.",
+        error:
+          "Сервис временно недоступен. Мы уже работаем над этим — попробуйте позже.",
         zai_status: result.status,
-        zai_body: result.body.slice(0, 300),
       },
       { status: 502 }
     );
@@ -360,9 +360,8 @@ export function handleZaiError(
     return res.json(
       {
         error:
-          "Превышен лимит запросов к Z.ai (429). Подождите минуту или пополните баланс на https://z.ai.",
+          "Психолог сейчас очень занят и не может сразу ответить. Отдохните пару минут, и попробуйте снова — он точно вернётся.",
         zai_status: result.status,
-        zai_body: result.body.slice(0, 300),
       },
       { status: 502 }
     );
@@ -371,8 +370,7 @@ export function handleZaiError(
     return res.json(
       {
         error:
-          result.body ||
-          "Превышено время ожидания. Попробуйте ещё раз — возможно, ИИ перегружен.",
+          "Психолог задумался надолго. Дайте ему минутку — попробуйте ещё раз.",
         zai_status: result.status,
       },
       { status: 504 }
@@ -380,9 +378,9 @@ export function handleZaiError(
   }
   return res.json(
     {
-      error: `Ошибка ${result.status}. Попробуйте ещё раз.`,
+      error:
+        "Психолог отошёл. Попробуйте через минуту — он скоро вернётся.",
       zai_status: result.status,
-      zai_body: result.body.slice(0, 500),
     },
     { status: 502 }
   );

@@ -153,7 +153,7 @@ export default function Home() {
       // Слайды — генерация визуальной истории
       if (diagnosisMode === "slides") {
         if (IS_DEMO) {
-          toast.info("Слайды доступны только в полной версии на Vercel.");
+          toast.info("Слайды станут доступны после запуска полной версии.");
           setLoading(false);
           return;
         }
@@ -165,7 +165,7 @@ export default function Home() {
       // Метафорические карты — отдельный API
       if (diagnosisMode === "card") {
         if (IS_DEMO) {
-          toast.info("Метафорические карты доступны только в полной версии на Vercel.");
+          toast.info("Метафорические карты станут доступны после запуска полной версии.");
           setLoading(false);
           return;
         }
@@ -183,7 +183,7 @@ export default function Home() {
       // Сказкотерапия — отдельный API эндпоинт
       if (diagnosisMode === "tale") {
         if (IS_DEMO) {
-          toast.info("Сказкотерапия доступна только в полной версии на Vercel.");
+          toast.info("Сказкотерапия станет доступна после запуска полной версии.");
           setLoading(false);
           return;
         }
@@ -203,7 +203,7 @@ export default function Home() {
       // Нейро-режим — отдельный API эндпоинт
       if (diagnosisMode === "neuro") {
         if (IS_DEMO) {
-          toast.info("Нейро-диагноз доступен только в полной версии на Vercel.");
+          toast.info("Нейро-диагноз станет доступен после запуска полной версии.");
           setLoading(false);
           return;
         }

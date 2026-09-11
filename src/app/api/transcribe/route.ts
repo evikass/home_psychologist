@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const config = getZaiConfig();
     if (!config.apiKey) {
       return NextResponse.json(
-        { error: "Ключ Z.ai не настроен на сервере." },
+        { error: "Голосовой ввод сейчас недоступен. Попробуйте позже." },
         { status: 500 }
       );
     }
