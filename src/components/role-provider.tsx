@@ -72,6 +72,19 @@ const STORAGE_KEY = "masterkit_role_v1";
 export const ADMIN_EMAIL = "evi-kass@mail.ru";
 export const ADMIN_VK = "https://vk.ru/evgeniikassin";
 
+// ID администраторов на платформах — при входе через VK/OK
+// автоматически получают роль admin (без ввода пароля)
+export const ADMIN_VK_IDS = ["54714757"];
+export const ADMIN_OK_IDS = ["512005078347"];
+
+/** Проверяет, является ли пользователь админом по платформенному ID */
+export function isAdminByPlatformId(platform: "vk" | "ok", userId: string | null | undefined): boolean {
+  if (!userId) return false;
+  if (platform === "vk") return ADMIN_VK_IDS.includes(String(userId));
+  if (platform === "ok") return ADMIN_OK_IDS.includes(String(userId));
+  return false;
+}
+
 export function RoleProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<UserProfile | null>(null);
 

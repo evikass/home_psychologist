@@ -23,9 +23,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useRole, ADMIN_EMAIL, ADMIN_VK } from "@/components/role-provider";
+import { useRole, ADMIN_EMAIL, ADMIN_VK, isAdminByPlatformId } from "@/components/role-provider";
 import { AdminActivityPanel } from "@/components/admin-activity-panel";
-import { useIsVK, useIsOK, useIsPlatform, useVKUser, useOKUser } from "@/components/vk-bridge-provider";
+import { useIsVK, useIsOK, useIsPlatform, usePlatform, useVKUser, useOKUser, usePlatformUserId } from "@/components/vk-bridge-provider";
 import { toast } from "sonner";
 
 type ProfileTab = "guest" | "user" | "psychologist";
@@ -99,6 +99,8 @@ export function RolePanel({
   const isVK = useIsVK();
   const isOK = useIsOK();
   const isPlatform = useIsPlatform();
+  const platform = usePlatform();
+  const platformUserId = usePlatformUserId();
   const vkUser = useVKUser();
   const okUser = useOKUser();
   const [activeTab, setActiveTab] = useState<ProfileTab>("guest");
@@ -110,6 +112,7 @@ export function RolePanel({
 
   // Бесшовная авторизация для платформ (VK + OK)
   // VK Rule 1.2.2 + OK: на платформах не должно быть формы пароля
+  // Если пользователь в списке админов (ADMIN_VK_IDS / ADMIN_OK_IDS) — даём роль admin
   useEffect(() => {
     let active = true;
     Promise.resolve().then(() => {
@@ -117,30 +120,41 @@ export function RolePanel({
       // Если уже есть профиль — не перезаписываем
       if (profile) return;
 
+      // Проверяем, является ли пользователь админом по платформенному ID
+      const isPlatformAdmin = isAdminByPlatformId(platform as "vk" | "ok", platformUserId);
+
       // VK: используем данные из VKWebAppGetUserInfo
       if (isVK && vkUser) {
         setProfile({
-          role: "user",
+          role: isPlatformAdmin ? "admin" : "user",
           name: `${vkUser.first_name} ${vkUser.last_name}`,
           email: `vk_${vkUser.id}`,
+          approved: isPlatformAdmin ? true : undefined,
         });
-        setActiveTab("user");
+        setActiveTab(isPlatformAdmin ? "psychologist" : "user");
+        if (isPlatformAdmin) {
+          toast.success("Вход выполнен. Режим администратора.");
+        }
         return;
       }
 
       // OK: используем данные из URL (viewer_id + viewer_name)
       if (isOK && okUser) {
         setProfile({
-          role: "user",
+          role: isPlatformAdmin ? "admin" : "user",
           name: okUser.name,
           email: `ok_${okUser.id}`,
+          approved: isPlatformAdmin ? true : undefined,
         });
-        setActiveTab("user");
+        setActiveTab(isPlatformAdmin ? "psychologist" : "user");
+        if (isPlatformAdmin) {
+          toast.success("Вход выполнен. Режим администратора.");
+        }
         return;
       }
     });
     return () => { active = false; };
-  }, [isVK, isOK, vkUser, okUser, profile, setProfile]);
+  }, [isVK, isOK, vkUser, okUser, profile, setProfile, platform, platformUserId]);
 
   // При открытии — определяем вкладку
   useEffect(() => {
