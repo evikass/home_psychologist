@@ -113,18 +113,28 @@ export function RolePanel({
   // Бесшовная авторизация для платформ (VK + OK)
   // VK Rule 1.2.2 + OK: на платформах не должно быть формы пароля
   // Если пользователь в списке админов (ADMIN_VK_IDS / ADMIN_OK_IDS) — даём роль admin
+  //
+  // ВАЖНО: проверяем админ-статус по vkUser.id / okUser.id напрямую,
+  // а не по platformUserId — потому что platformUserId может прийти позже
+  // чем vkUser (race condition), и профиль создастся с role="user".
+  //
+  // ВАЖНО: если профиль уже создан с role="user", но пользователь на самом деле
+  // админ (старый профиль из localStorage) — обновляем на admin.
   useEffect(() => {
     let active = true;
     Promise.resolve().then(() => {
       if (!active) return;
-      // Если уже есть профиль — не перезаписываем
-      if (profile) return;
-
-      // Проверяем, является ли пользователь админом по платформенному ID
-      const isPlatformAdmin = isAdminByPlatformId(platform as "vk" | "ok", platformUserId);
 
       // VK: используем данные из VKWebAppGetUserInfo
       if (isVK && vkUser) {
+        const isPlatformAdmin = isAdminByPlatformId("vk", String(vkUser.id));
+
+        // Если профиль уже есть и роль правильная — ничего не делаем
+        if (profile && profile.email === `vk_${vkUser.id}` && profile.role === (isPlatformAdmin ? "admin" : "user")) {
+          return;
+        }
+
+        // Создаём или обновляем профиль
         setProfile({
           role: isPlatformAdmin ? "admin" : "user",
           name: `${vkUser.first_name} ${vkUser.last_name}`,
@@ -132,7 +142,7 @@ export function RolePanel({
           approved: isPlatformAdmin ? true : undefined,
         });
         setActiveTab(isPlatformAdmin ? "psychologist" : "user");
-        if (isPlatformAdmin) {
+        if (isPlatformAdmin && profile?.role !== "admin") {
           toast.success("Вход выполнен. Режим администратора.");
         }
         return;
@@ -140,6 +150,14 @@ export function RolePanel({
 
       // OK: используем данные из URL (viewer_id + viewer_name)
       if (isOK && okUser) {
+        const isPlatformAdmin = isAdminByPlatformId("ok", String(okUser.id));
+
+        // Если профиль уже есть и роль правильная — ничего не делаем
+        if (profile && profile.email === `ok_${okUser.id}` && profile.role === (isPlatformAdmin ? "admin" : "user")) {
+          return;
+        }
+
+        // Создаём или обновляем профиль
         setProfile({
           role: isPlatformAdmin ? "admin" : "user",
           name: okUser.name,
@@ -147,14 +165,14 @@ export function RolePanel({
           approved: isPlatformAdmin ? true : undefined,
         });
         setActiveTab(isPlatformAdmin ? "psychologist" : "user");
-        if (isPlatformAdmin) {
+        if (isPlatformAdmin && profile?.role !== "admin") {
           toast.success("Вход выполнен. Режим администратора.");
         }
         return;
       }
     });
     return () => { active = false; };
-  }, [isVK, isOK, vkUser, okUser, profile, setProfile, platform, platformUserId]);
+  }, [isVK, isOK, vkUser, okUser, profile, setProfile]);
 
   // При открытии — определяем вкладку
   useEffect(() => {
