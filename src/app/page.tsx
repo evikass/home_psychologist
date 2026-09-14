@@ -41,6 +41,7 @@ import { VoiceInput } from "@/components/voice-input";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useI18n } from "@/components/language-provider";
 import { ConsultantModal } from "@/components/consultant-modal";
+import { MonetizationButton } from "@/components/monetization-button";
 import { ClientsPanel } from "@/components/clients-panel";
 import { RolePanel } from "@/components/role-panel";
 import { MentorsPanel } from "@/components/mentors-panel";
@@ -897,7 +898,7 @@ export default function Home() {
 
       <NeurotransformingPanel open={neuroOpen} onOpenChange={setNeuroOpen} />
 
-      <Footer onConsultant={() => setConsultantOpen(true)} onMentors={() => setMentorsOpen(true)} isVK={isVK} />
+      <Footer onConsultant={() => setConsultantOpen(true)} onMentors={() => setMentorsOpen(true)} isVK={isVK} isPlatform={isPlatform} />
     </div>
   );
 }
@@ -1141,7 +1142,7 @@ function LoadingState() {
   );
 }
 
-function Footer({ onConsultant, onMentors, isVK }: { onConsultant: () => void; onMentors: () => void; isVK: boolean }) {
+function Footer({ onConsultant, onMentors, isVK, isPlatform }: { onConsultant: () => void; onMentors: () => void; isVK: boolean; isPlatform: boolean }) {
   return (
     <footer className="mt-auto border-t bg-secondary/30">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 text-xs text-muted-foreground flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between safe-bottom">
@@ -1149,25 +1150,29 @@ function Footer({ onConsultant, onMentors, isVK }: { onConsultant: () => void; o
           <span>© {new Date().getFullYear()} · «Домашний психолог»</span>
           <span>Не заменяет работу с психологом.</span>
         </div>
-        {/* В VK — нет внешних ссылок и монетизации */}
-        {!isVK && (
-          <div className="flex gap-2 shrink-0">
-            <button
-              onClick={onMentors}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
-            >
-              <Users className="h-3.5 w-3.5" />
-              Наставники
-            </button>
-            <button
-              onClick={onConsultant}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Консультант
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2 shrink-0 flex-wrap">
+          {/* Монетизация — показывается только на платформах (VK/OK) */}
+          {isPlatform && <MonetizationButton />}
+          {/* Наставники и Консультант — только вне платформ (на платформах монетизация через VK Pay) */}
+          {!isPlatform && (
+            <>
+              <button
+                onClick={onMentors}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Наставники
+              </button>
+              <button
+                onClick={onConsultant}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Консультант
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </footer>
   );

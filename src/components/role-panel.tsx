@@ -282,7 +282,20 @@ export function RolePanel({
             <RoleTabButton active={displayTab === "guest"} onClick={() => { if (profile) handleLogout(); }} icon={User} label="Гость" />
           )}
           <RoleTabButton active={displayTab === "user"} onClick={() => { if (!profile) setActiveTab("guest"); }} icon={Check} label="Пользователь" />
-          <RoleTabButton active={displayTab === "psychologist"} onClick={() => { if (!profile) setShowApplyForm(true); }} icon={Award} label="Психолог" />
+          <RoleTabButton
+            active={displayTab === "psychologist"}
+            onClick={() => {
+              // Если уже психолог/админ — открываем вкладку психолога (CRM)
+              if (role === "psychologist" || isAdmin) {
+                setActiveTab("psychologist");
+              } else {
+                // Иначе — открываем форму заявки
+                setShowApplyForm(true);
+              }
+            }}
+            icon={Award}
+            label="Психолог"
+          />
         </div>
 
         <AnimatePresence mode="wait">
