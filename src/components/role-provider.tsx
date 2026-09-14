@@ -74,8 +74,8 @@ export const ADMIN_VK = "https://vk.ru/evgeniikassin";
 
 // ID администраторов на платформах — при входе через VK/OK
 // автоматически получают роль admin (без ввода пароля)
-export const ADMIN_VK_IDS = ["54714757"];
-export const ADMIN_OK_IDS = ["512005078347"];
+export const ADMIN_VK_IDS = ["15863253"];
+export const ADMIN_OK_IDS = ["411099059723"];
 
 /** Проверяет, является ли пользователь админом по платформенному ID */
 export function isAdminByPlatformId(platform: "vk" | "ok", userId: string | null | undefined): boolean {
