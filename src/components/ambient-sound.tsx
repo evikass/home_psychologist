@@ -157,6 +157,31 @@ export function AmbientSound() {
     };
   }, []);
 
+  // VK Rule 2.2.5: при сворачивании/закрытии мини-приложения — останавливаем звук.
+  // События отправляются из vk-bridge-provider при VKWebAppViewHide / VKWebAppViewRestore.
+  // Также обрабатываем visibilitychange (универсальное событие браузера).
+  useEffect(() => {
+    const handleViewHide = () => {
+      if (playing) {
+        stop();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && playing) {
+        stop();
+      }
+    };
+
+    window.addEventListener("app:view-hide", handleViewHide);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("app:view-hide", handleViewHide);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [playing, stop]);
+
   return (
     <div className="flex items-center gap-1.5">
       <Button

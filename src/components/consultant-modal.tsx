@@ -210,7 +210,10 @@ function AiConsultantTab() {
           }),
         });
         if (!result.ok) {
-          throw new Error(result.error || "Не удалось получить ответ.");
+          toast.info("Консультант сейчас недоступен. Попробуйте через минуту.", {
+            duration: 4000,
+          });
+          return;
         }
         setMessages((prev) => [
           ...prev,
@@ -221,7 +224,10 @@ function AiConsultantTab() {
           },
         ]);
       } catch (e) {
-        toast.error((e as Error).message || "Ошибка.");
+        // Скрываем технические детали от пользователя
+        toast.info("Консультант сейчас недоступен. Попробуйте через минуту.", {
+          duration: 4000,
+        });
       } finally {
         setLoading(false);
       }

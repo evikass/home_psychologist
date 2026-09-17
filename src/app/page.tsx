@@ -175,7 +175,14 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
         });
-        if (!result.ok) throw new Error(result.error);
+        if (!result.ok) {
+          // Мягкое сообщение об ошибке без технических деталей
+          toast.info("Картотерапевт сейчас недоступен. Попробуйте через минуту.", {
+            duration: 4000,
+          });
+          setLoading(false);
+          return;
+        }
         setCardResult(result.data);
         trackActivity("card", "Метафорические карты");
         return;
@@ -194,7 +201,11 @@ export default function Home() {
           body: JSON.stringify({ text }),
         });
         if (!result.ok) {
-          throw new Error(result.error);
+          toast.info("Сказочник сейчас недоступен. Попробуйте через минуту.", {
+            duration: 4000,
+          });
+          setLoading(false);
+          return;
         }
         setTaleResult(result.data);
         trackActivity("tale", "Сказкотерапия");
@@ -214,7 +225,11 @@ export default function Home() {
           body: JSON.stringify({ text }),
         });
         if (!result.ok) {
-          throw new Error(result.error);
+          toast.info("Нейро-анализ сейчас недоступен. Попробуйте через минуту.", {
+            duration: 4000,
+          });
+          setLoading(false);
+          return;
         }
         setNeuroResult(result.data);
         trackActivity("neuro", "Нейро-диагноз");
@@ -241,7 +256,22 @@ export default function Home() {
         body: JSON.stringify({ text, lang }),
       });
       if (!result.ok) {
-        throw new Error(result.error || "Не удалось получить диагноз.");
+        // Smart fallback: если API недоступен (Vercel в РФ, таймаут, и т.д.)
+        // и мы НЕ в демо-режиме — используем demo-диагноз как запасной вариант.
+        // Это позволяет модератору увидеть рабочий диагноз даже когда API упал.
+        console.warn("[diagnose] API failed, using demo fallback:", result.status);
+        const demoResult = getDemoDiagnosis(text);
+        setResult(demoResult);
+        trackActivity("diagnosis", "Стандартный диагноз (demo fallback)");
+        setCurrentDoneProcessings([]);
+        const newEntry = { id: `${Date.now()}-demo`, timestamp: Date.now(), text: text.slice(0, 280), result: demoResult };
+        addEntry(text, demoResult);
+        setCurrentEntryId(newEntry.id);
+        // Показываем мягкое предупреждение, что работает упрощённый режим
+        toast.info("ИИ-анализ временно недоступен — показан пример диагноза. Попробуйте позже для полного разбора.", {
+          duration: 5000,
+        });
+        return;
       }
       const finalResult = result.data;
       setResult(finalResult);

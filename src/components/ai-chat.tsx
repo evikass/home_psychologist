@@ -98,7 +98,11 @@ export function AiChat({
         });
 
         if (!result.ok) {
-          throw new Error(result.error || "Не удалось получить ответ.");
+          // Мягкое сообщение без технических деталей
+          toast.info("Собеседник сейчас недоступен. Попробуйте через минуту.", {
+            duration: 4000,
+          });
+          return;
         }
 
         const assistantMessage: ChatMessage = {
@@ -108,8 +112,10 @@ export function AiChat({
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } catch (e) {
-        const msg = (e as Error).message || "Ошибка.";
-        toast.error(msg);
+        // Скрываем технические детали от пользователя
+        toast.info("Собеседник сейчас недоступен. Попробуйте через минуту.", {
+          duration: 4000,
+        });
       } finally {
         setLoading(false);
       }

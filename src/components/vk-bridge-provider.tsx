@@ -193,6 +193,62 @@ export function VKBridgeProvider({ children }: { children: React.ReactNode }) {
                 navigation_bar_color: "#c2624a",
               });
             } catch {}
+
+            // VK Rule 2.2.5: при закрытии/сворачивании мини-приложения
+            // нужно остановить воспроизведение звука.
+            // Событие VKWebAppViewHide приходит, когда пользователь:
+            //   - Сворачивает мини-приложение (свайп вниз)
+            //   - Закрывает его
+            //   - Переключается на другое приложение
+            // VKWebAppViewRestore — когда возвращается обратно.
+            try {
+              vkBridge.subscribe((event: { detail?: { type?: string } }) => {
+                const eventType = event?.detail?.type;
+                console.log("[VK] Bridge event:", eventType);
+
+                if (eventType === "VKWebAppViewHide") {
+                  // Останавливаем все звуки: аудио, TTS, ambient sound
+                  console.log("[VK] VKWebAppViewHide — stopping all audio");
+
+                  // 1. Web Speech API (TTS)
+                  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                    try {
+                      window.speechSynthesis.cancel();
+                    } catch {}
+                  }
+
+                  // 2. Все <audio> и <video> элементы на странице
+                  if (typeof document !== "undefined") {
+                    try {
+                      const mediaElements = document.querySelectorAll("audio, video");
+                      mediaElements.forEach((el) => {
+                        try {
+                          el.pause();
+                        } catch {}
+                      });
+                    } catch {}
+                  }
+
+                  // 3. Кастомное событие для наших компонентов (ambient-sound, voice-input)
+                  if (typeof window !== "undefined") {
+                    try {
+                      window.dispatchEvent(new CustomEvent("app:view-hide"));
+                    } catch {}
+                  }
+                }
+
+                if (eventType === "VKWebAppViewRestore") {
+                  console.log("[VK] VKWebAppViewRestore");
+                  if (typeof window !== "undefined") {
+                    try {
+                      window.dispatchEvent(new CustomEvent("app:view-restore"));
+                    } catch {}
+                  }
+                }
+              });
+            } catch (e) {
+              console.warn("[VK] Failed to subscribe to bridge events:", e);
+            }
           }
 
           if (active) {

@@ -206,11 +206,17 @@ export function SlideShowLoader({ text, onComplete }: { text: string; onComplete
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-      if (!result.ok) throw new Error(result.error || "Ошибка.");
+      if (!result.ok) {
+        const msg = "Сказочник сейчас недоступен. Попробуйте через минуту.";
+        setError(msg);
+        toast.info(msg, { duration: 4000 });
+        return;
+      }
       onComplete(result.data);
     } catch (e) {
-      setError((e as Error).message);
-      toast.error((e as Error).message);
+      const msg = "Сказочник сейчас недоступен. Попробуйте через минуту.";
+      setError(msg);
+      toast.info(msg, { duration: 4000 });
     } finally {
       setLoading(false);
     }
