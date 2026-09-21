@@ -29,6 +29,7 @@ import { ConsciousnessGeometry } from "@/components/consciousness-geometry";
 import { TransformationChain } from "@/components/transformation-chain";
 import { AiChat } from "@/components/ai-chat";
 import { PdfExport } from "@/components/pdf-export";
+import { useIsPlatform } from "@/components/vk-bridge-provider";
 import { PROCESSING_BY_TYPE } from "@/lib/masterkit-data";
 import type { DiagnoseResponse } from "@/lib/masterkit-prompt";
 import { useSpeech } from "@/hooks/use-speech";
@@ -103,6 +104,7 @@ export function DiagnosisCard({
   );
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const [pdfOpen, setPdfOpen] = useState(false);
+  const isPlatform = useIsPlatform();
   const { speaking, speakSequence, stop, supported: ttsSupported } = useSpeech("ru-RU");
   const { lang } = useI18n();
 
@@ -165,15 +167,18 @@ export function DiagnosisCard({
               <h3 className="font-display text-lg sm:text-xl font-semibold leading-snug">
                 {lang === "en" ? "What's happening" : "Что происходит"}
               </h3>
-              <button
-                type="button"
-                onClick={() => setPdfOpen(true)}
-                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors shrink-0"
-                title={lang === "en" ? "Export to PDF" : "Экспорт в PDF"}
-              >
-                <Download className="h-3 w-3" />
-                <span className="hidden sm:inline">{lang === "en" ? "PDF" : "PDF"}</span>
-              </button>
+              {/* PDF-экспорт — только вне платформ (на VK/OK не работает скачивание) */}
+              {!isPlatform && (
+                <button
+                  type="button"
+                  onClick={() => setPdfOpen(true)}
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors shrink-0"
+                  title={lang === "en" ? "Export to PDF" : "Экспорт в PDF"}
+                >
+                  <Download className="h-3 w-3" />
+                  <span className="hidden sm:inline">{lang === "en" ? "PDF" : "PDF"}</span>
+                </button>
+              )}
             </div>
             <p className="text-sm sm:text-base text-foreground/85 leading-relaxed">
               {data.diagnosis_summary}

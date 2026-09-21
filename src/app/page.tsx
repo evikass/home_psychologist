@@ -41,7 +41,7 @@ import { VoiceInput } from "@/components/voice-input";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useI18n } from "@/components/language-provider";
 import { ConsultantModal } from "@/components/consultant-modal";
-import { MonetizationButton } from "@/components/monetization-button";
+import { PrivacyConsent, PrivacyPolicyModal } from "@/components/privacy-consent";
 import { ClientsPanel } from "@/components/clients-panel";
 import { RolePanel } from "@/components/role-panel";
 import { MentorsPanel } from "@/components/mentors-panel";
@@ -109,6 +109,7 @@ export default function Home() {
   const [clientsOpen, setClientsOpen] = useState(false);
   const [rolePanelOpen, setRolePanelOpen] = useState(false);
   const [mentorsOpen, setMentorsOpen] = useState(false);
+  const [privacyPolicyOpen, setPrivacyPolicyOpen] = useState(false);
   const [diagnosisMode, setDiagnosisMode] = useState<"standard" | "neuro" | "tale" | "card" | "slides">("standard");
   const [neuroResult, setNeuroResult] = useState<NeuroDiagnosis | null>(null);
   const [taleResult, setTaleResult] = useState<TaleDiagnosis | null>(null);
@@ -920,6 +921,10 @@ export default function Home() {
 
       <ConsultantModal open={consultantOpen} onOpenChange={setConsultantOpen} />
 
+      {/* Политика конфиденциальности — модал согласия при первом визите (VK Rule 1.1.4) */}
+      <PrivacyConsent onOpenChange={() => {}} />
+      <PrivacyPolicyModal open={privacyPolicyOpen} onOpenChange={setPrivacyPolicyOpen} />
+
       <ClientsPanel open={clientsOpen} onOpenChange={setClientsOpen} />
 
       <RolePanel open={rolePanelOpen} onOpenChange={setRolePanelOpen} />
@@ -928,7 +933,13 @@ export default function Home() {
 
       <NeurotransformingPanel open={neuroOpen} onOpenChange={setNeuroOpen} />
 
-      <Footer onConsultant={() => setConsultantOpen(true)} onMentors={() => setMentorsOpen(true)} isVK={isVK} isPlatform={isPlatform} />
+      <Footer
+        onConsultant={() => setConsultantOpen(true)}
+        onMentors={() => setMentorsOpen(true)}
+        isVK={isVK}
+        isPlatform={isPlatform}
+        onPrivacy={() => setPrivacyPolicyOpen(true)}
+      />
     </div>
   );
 }
@@ -1172,37 +1183,39 @@ function LoadingState() {
   );
 }
 
-function Footer({ onConsultant, onMentors, isVK, isPlatform }: { onConsultant: () => void; onMentors: () => void; isVK: boolean; isPlatform: boolean }) {
+function Footer({ onConsultant, onMentors, isVK, isPlatform, onPrivacy }: { onConsultant: () => void; onMentors: () => void; isVK: boolean; isPlatform: boolean; onPrivacy: () => void }) {
   return (
     <footer className="mt-auto border-t bg-secondary/30">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 text-xs text-muted-foreground flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between safe-bottom">
         <div className="flex flex-col gap-1.5">
           <span>© {new Date().getFullYear()} · «Домашний психолог»</span>
+          <button
+            onClick={onPrivacy}
+            className="text-left text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+          >
+            Политика конфиденциальности
+          </button>
           <span>Не заменяет работу с психологом.</span>
         </div>
-        <div className="flex gap-2 shrink-0 flex-wrap">
-          {/* Монетизация — показывается только на платформах (VK/OK) */}
-          {isPlatform && <MonetizationButton />}
-          {/* Наставники и Консультант — только вне платформ (на платформах монетизация через VK Pay) */}
-          {!isPlatform && (
-            <>
-              <button
-                onClick={onMentors}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
-              >
-                <Users className="h-3.5 w-3.5" />
-                Наставники
-              </button>
-              <button
-                onClick={onConsultant}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Консультант
-              </button>
-            </>
-          )}
-        </div>
+        {/* Наставники и Консультант — только вне платформ */}
+        {!isPlatform && (
+          <div className="flex gap-2 shrink-0 flex-wrap">
+            <button
+              onClick={onMentors}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Users className="h-3.5 w-3.5" />
+              Наставники
+            </button>
+            <button
+              onClick={onConsultant}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Консультант
+            </button>
+          </div>
+        )}
       </div>
     </footer>
   );

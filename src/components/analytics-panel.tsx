@@ -25,6 +25,7 @@ import {
   getHistoryStats,
   type HistoryEntry,
 } from "@/hooks/use-diagnosis-history";
+import { useIsPlatform } from "@/components/vk-bridge-provider";
 
 type Period = "7d" | "30d" | "all";
 
@@ -53,6 +54,7 @@ export function AnalyticsPanel({
   history: HistoryEntry[];
 }) {
   const [period, setPeriod] = useState<Period>("30d");
+  const isPlatform = useIsPlatform();
 
   const filteredHistory = useMemo(() => {
     if (period === "all") return history;
@@ -245,26 +247,28 @@ export function AnalyticsPanel({
               )}
             </div>
 
-            {/* Экспорт */}
-            <div className="flex items-center justify-between rounded-xl border bg-secondary/40 p-3">
-              <div className="text-xs">
-                <div className="font-medium text-foreground">
-                  Экспорт для работы с наставником
+            {/* Экспорт — только вне платформ (на VK/OK не работает скачивание) */}
+            {!isPlatform && (
+              <div className="flex items-center justify-between rounded-xl border bg-secondary/40 p-3">
+                <div className="text-xs">
+                  <div className="font-medium text-foreground">
+                    Экспорт для работы с наставником
+                  </div>
+                  <div className="text-muted-foreground mt-0.5">
+                    Скачайте всю историю в JSON
+                  </div>
                 </div>
-                <div className="text-muted-foreground mt-0.5">
-                  Скачайте всю историю в JSON
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportHistoryToJson(history)}
+                  className="gap-1.5"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Скачать JSON
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => exportHistoryToJson(history)}
-                className="gap-1.5"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Скачать JSON
-              </Button>
-            </div>
+            )}
           </div>
         )}
       </DialogContent>
