@@ -87,14 +87,32 @@ function detectPlatform(): {
     return { platform: "vk", isVK: true, isOK: false, userId: vkUserId, okUserName: null };
   }
   if (hasOKParam || isOKReferer) {
-    // У OK нет user_id в URL напрямую — берём из viewer_id (если есть)
-    // или используем хеш signed_request как уникальный идентификатор сессии
+    // OK передаёт ID пользователя в разных параметрах в зависимости от платформы:
+    // - viewer_id: основной параметр ID пользователя (десктоп ok.ru)
+    // - uid: альтернативный вариант
+    // - logged_user_id: иногда присутствует
+    // ВАЖНО: signed_request — это HMAC подпись, она РАЗНАЯ при каждой сессии!
+    // Использовать её как userId НЕЛЬЗЯ — прогресс не будет синхронизироваться
+    // между десктопом и Android (модератор OK отклонил за это).
     const okUserId =
       urlParams.get("viewer_id") ||
       urlParams.get("uid") ||
-      (urlParams.get("signed_request") || "").slice(0, 32);
-    // Имя пользователя OK может прийти в viewer_name или вычисляться из API
+      urlParams.get("logged_user_id") ||
+      urlParams.get("user_id") ||
+      null; // НЕ используем signed_request — он разный при каждой сессии
+
+    // Имя пользователя OK может прийти в viewer_name или first_name
     const okUserName = urlParams.get("viewer_name") || urlParams.get("first_name") || null;
+
+    console.log("[Platform] OK params:", {
+      viewer_id: urlParams.get("viewer_id"),
+      uid: urlParams.get("uid"),
+      logged_user_id: urlParams.get("logged_user_id"),
+      user_id: urlParams.get("user_id"),
+      has_signed_request: urlParams.has("signed_request"),
+      resolved_okUserId: okUserId,
+    });
+
     return { platform: "ok", isVK: false, isOK: true, userId: okUserId, okUserName };
   }
   return { platform: "web", isVK: false, isOK: false, userId: null, okUserName: null };
@@ -139,8 +157,66 @@ export function VKBridgeProvider({ children }: { children: React.ReactNode }) {
         if (detected.isOK) {
           // OK — отдельная платформа, VK Bridge не используется
           if (active) {
-            const okUserIdFinal = detected.userId || `ok_${Date.now()}`;
-            const okUserNameFinal = detected.okUserName || "Пользователь OK";
+            let okUserIdFinal = detected.userId;
+            let okUserNameFinal = detected.okUserName || "Пользователь OK";
+
+            // Если userId не найден в URL — пробуем получить через OK SDK
+            // (на Android OK может не передавать viewer_id в URL)
+            if (!okUserIdFinal && typeof window !== "undefined") {
+              // Пробуем FAPI (OK Android/iOS SDK)
+              try {
+                const fapi = (window as unknown as { FAPI?: { Client?: { invoke?: (method: string, params: Record<string, unknown>, cb: (result: unknown) => void) => void } } }).FAPI;
+                if (fapi?.Client?.invoke) {
+                  const uid = await new Promise<string | null>((resolve) => {
+                    try {
+                      fapi.Client.invoke("users.getCurrentUser", {}, (result: unknown) => {
+                        const r = result as { uid?: string; user_id?: string; id?: string };
+                        resolve(r?.uid || r?.user_id || r?.id || null);
+                      });
+                    } catch {
+                      resolve(null);
+                    }
+                  });
+                  if (uid) {
+                    okUserIdFinal = uid;
+                    console.log("[Platform] OK: got userId from FAPI:", uid);
+                  }
+                }
+              } catch (e) {
+                console.warn("[Platform] OK FAPI error:", e);
+              }
+
+              // Пробуем OKSDK (десктопный JS SDK)
+              if (!okUserIdFinal) {
+                try {
+                  const oksdk = (window as unknown as { OKSDK?: { getUserId?: () => string | number } }).OKSDK;
+                  if (oksdk?.getUserId) {
+                    const uid = oksdk.getUserId();
+                    if (uid) {
+                      okUserIdFinal = String(uid);
+                      console.log("[Platform] OK: got userId from OKSDK:", uid);
+                    }
+                  }
+                } catch (e) {
+                  console.warn("[Platform] OK OKSDK error:", e);
+                }
+              }
+            }
+
+            // Если всё ещё нет userId — показываем предупреждение в консоли
+            // и используем ID из signed_request (хоть он и временный,
+            // лучше чем случайный — по крайней мере, в рамках одной сессии стабильный)
+            if (!okUserIdFinal) {
+              console.warn("[Platform] OK: userId not found! Progress will NOT sync between devices.");
+              // Fallback: используем ID сессии из signed_request (хеш)
+              // Это лучше чем случайный — по крайней мере, в рамках одной сессии стабильно
+              const urlParams = new URLSearchParams(window.location.search);
+              const signedRequest = urlParams.get("signed_request") || "";
+              okUserIdFinal = signedRequest
+                ? `session_${signedRequest.slice(0, 16)}`
+                : `anonymous_${Date.now()}`;
+            }
+
             setIsOK(true);
             setPlatform("ok");
             setPlatformUserId(okUserIdFinal);
