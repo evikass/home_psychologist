@@ -20,8 +20,14 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
-// basePath для иконок — на GitHub Pages нужен префикс /home_psychologist
-const ICON_BASE = process.env.STATIC_EXPORT === "true" ? "/home_psychologist" : "";
+// basePath для иконок:
+// - GitHub Pages: /home_psychologist
+// - VK Hosting / OK: корень (пустая строка)
+// - Vercel: корень (пустая строка)
+const ICON_BASE =
+  process.env.STATIC_EXPORT === "true" && process.env.VK_HOSTING !== "true"
+    ? "/home_psychologist"
+    : "";
 
 export const metadata: Metadata = {
   title: "Домашний психолог · ИИ-диагностика и самотерапия",

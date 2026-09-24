@@ -1,15 +1,29 @@
 import type { NextConfig } from "next";
 
-// STATIC_EXPORT переключает сборку для GitHub Pages.
-// На Vercel/обычном dev — оставляем standalone с API-роутами.
-// На GitHub Pages — static export без API (используется demo-режим).
+// Три режима сборки:
+//
+// 1. Vercel (по умолчанию): output=standalone, с API-роутами
+//    Команда: next build
+//
+// 2. GitHub Pages: STATIC_EXPORT=true, basePath=/home_psychologist
+//    Команда: STATIC_EXPORT=true next build
+//    URL: https://evikass.github.io/home_psychologist/
+//
+// 3. VK Hosting / OK: STATIC_EXPORT=true VK_HOSTING=true, БЕЗ basePath
+//    Команда: STATIC_EXPORT=true VK_HOSTING=true next build
+//    URL: https://vk-app.ru/... (корень домена)
+
 const isStaticExport = process.env.STATIC_EXPORT === "true";
+const isVKHosting = process.env.VK_HOSTING === "true";
+
+// basePath нужен ТОЛЬКО для GitHub Pages (репозиторий не корневой)
+// Для VK Hosting / OK — ассеты в корне, basePath не нужен
+const needsBasePath = isStaticExport && !isVKHosting;
 
 const nextConfig: NextConfig = {
   output: isStaticExport ? "export" : "standalone",
-  // basePath нужен только для GitHub Pages (репозиторий не корневой)
-  basePath: isStaticExport ? "/home_psychologist" : "",
-  assetPrefix: isStaticExport ? "/home_psychologist/" : "",
+  basePath: needsBasePath ? "/home_psychologist" : "",
+  assetPrefix: needsBasePath ? "/home_psychologist/" : "",
   trailingSlash: isStaticExport,
   images: {
     unoptimized: isStaticExport,
