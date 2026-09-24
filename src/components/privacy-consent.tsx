@@ -116,7 +116,6 @@ const PRIVACY_TEXT = `# Политика конфиденциальности «
 export function PrivacyConsent({ onOpenChange }: { onOpenChange: (v: boolean) => void }) {
   const [showModal, setShowModal] = useState(false);
   const [showFullPolicy, setShowFullPolicy] = useState(false);
-  const [declined, setDeclined] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -140,40 +139,14 @@ export function PrivacyConsent({ onOpenChange }: { onOpenChange: (v: boolean) =>
     onOpenChange(false);
   };
 
+  // Если пользователь отказался — показываем ТОЛЬКО модалку снова
+  // (не перекрываем весь экран, чтобы приложение оставалось доступным)
   const handleDecline = () => {
     setShowModal(false);
-    setDeclined(true);
+    // Сразу показываем модалку снова с пояснением
+    setTimeout(() => setShowModal(true), 100);
     onOpenChange(false);
   };
-
-  // Если пользователь отказался — показываем экран заглушку
-  if (declined) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-background flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
-          <div className="flex h-16 w-16 mx-auto mb-4 items-center justify-center rounded-full bg-amber-100">
-            <Shield className="h-8 w-8 text-amber-600" />
-          </div>
-          <h2 className="font-display text-xl font-semibold mb-3">
-            Сервис недоступен
-          </h2>
-          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-            Для использования сервиса «Домашний психолог» необходимо согласие
-            с политикой конфиденциальности.
-          </p>
-          <button
-            onClick={() => {
-              setDeclined(false);
-              setShowModal(true);
-            }}
-            className="w-full h-11 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors"
-          >
-            Ознакомиться с политикой
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -184,7 +157,7 @@ export function PrivacyConsent({ onOpenChange }: { onOpenChange: (v: boolean) =>
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
+            className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-4"
           >
             <motion.div
               initial={{ scale: 0.95, y: 10 }}
