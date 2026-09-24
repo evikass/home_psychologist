@@ -157,30 +157,41 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       setProfileState(newProfile);
       persist(newProfile);
 
-      // Открываем email клиент с предзаполненным письмом
-      const subject = encodeURIComponent(
-        `Заявка на статус психолога — ${data.name}`
-      );
-      const body = encodeURIComponent(
-        `Заявка на регистрацию как практикующий психолог
+      // Отправляем заявку на сервер через API
+      // (раньше использовался mailto: — но в VK/OK WebView это не работает,
+      // модератор видел ошибку при нажатии «Отправить»)
+      try {
+        // Определяем платформу
+        const urlParams = new URLSearchParams(window.location.search);
+        const platform =
+          urlParams.has("vk_platform") || urlParams.has("vk_user_id") ? "vk" :
+          urlParams.has("signed_request") || urlParams.has("session_key") ? "ok" :
+          "web";
+        const platformUserId =
+          urlParams.get("vk_user_id") ||
+          urlParams.get("viewer_id") ||
+          urlParams.get("uid") ||
+          "anonymous";
 
-Имя: ${data.name}
-Email: ${data.email}
-Специализация: ${data.specialization}
-Опыт работы: ${data.experience}
-Дата заявки: ${new Date().toLocaleString("ru-RU")}
-
----
-Для одобрения заявки перейдите в приложение, откройте панель администратора
-и подтвердите статус психолога для этого пользователя.
-
-Также можно связаться с заявителем напрямую:
-- Email: ${data.email}
-- VK: ${ADMIN_VK}`
-      );
-
-      // Открываем почтовый клиент
-      window.location.href = `mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`;
+        // Отправляем заявку (fire-and-forget — не блокируем UI)
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        fetch(`${apiUrl}/api/psychologist-applications`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            specialization: data.specialization,
+            experience: data.experience,
+            platform,
+            platformUserId,
+          }),
+        }).catch((e) => {
+          console.warn("[applyAsPsychologist] Failed to submit application:", e);
+        });
+      } catch (e) {
+        console.warn("[applyAsPsychologist] Error:", e);
+      }
     },
     [persist]
   );

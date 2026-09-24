@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, X, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Shield, Check } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
@@ -117,6 +116,7 @@ const PRIVACY_TEXT = `# Политика конфиденциальности «
 export function PrivacyConsent({ onOpenChange }: { onOpenChange: (v: boolean) => void }) {
   const [showModal, setShowModal] = useState(false);
   const [showFullPolicy, setShowFullPolicy] = useState(false);
+  const [declined, setDeclined] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -141,24 +141,39 @@ export function PrivacyConsent({ onOpenChange }: { onOpenChange: (v: boolean) =>
   };
 
   const handleDecline = () => {
-    // Если отказался — закрываем приложение
     setShowModal(false);
+    setDeclined(true);
     onOpenChange(false);
-    if (typeof window !== "undefined") {
-      // Показываем страницу с сообщением
-      document.body.innerHTML = `
-        <div style="font-family: system-ui, sans-serif; text-align: center; padding: 40px 20px; max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #c2624a;">Сервис недоступен</h2>
-          <p style="color: #666; line-height: 1.6;">
-            Для использования сервиса «Домашний психолог» необходимо согласие
-            с политикой конфиденциальности.<br><br>
-            Пожалуйста, закройте приложение и откройте его снова, чтобы
-            ознакомиться с политикой.
-          </p>
-        </div>
-      `;
-    }
   };
+
+  // Если пользователь отказался — показываем экран заглушку
+  if (declined) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <div className="flex h-16 w-16 mx-auto mb-4 items-center justify-center rounded-full bg-amber-100">
+            <Shield className="h-8 w-8 text-amber-600" />
+          </div>
+          <h2 className="font-display text-xl font-semibold mb-3">
+            Сервис недоступен
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+            Для использования сервиса «Домашний психолог» необходимо согласие
+            с политикой конфиденциальности.
+          </p>
+          <button
+            onClick={() => {
+              setDeclined(false);
+              setShowModal(true);
+            }}
+            className="w-full h-11 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors"
+          >
+            Ознакомиться с политикой
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -169,78 +184,76 @@ export function PrivacyConsent({ onOpenChange }: { onOpenChange: (v: boolean) =>
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
           >
             <motion.div
               initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
-              className="bg-background rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden"
+              className="bg-background rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden"
+              style={{ maxHeight: "90vh" }}
             >
               {/* Заголовок */}
-              <div className="flex items-center gap-3 p-5 border-b">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <div className="flex items-center gap-3 p-4 sm:p-5 border-b shrink-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
                   <Shield className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <h2 className="font-display font-semibold text-base">
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-display font-semibold text-sm sm:text-base">
                     Политика конфиденциальности
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    Пожалуйста, ознакомьтесь перед началом использования
+                    Ознакомьтесь перед началом
                   </p>
                 </div>
               </div>
 
-              {/* Краткий текст */}
-              <ScrollArea className="flex-1 p-5 max-h-[50vh]">
+              {/* Краткий текст — скроллится */}
+              <div
+                className="p-4 sm:p-5 overflow-y-auto"
+                style={{ maxHeight: "calc(90vh - 180px)" }}
+              >
                 <div className="text-sm text-foreground/80 leading-relaxed space-y-3">
                   <p>
-                    Сервис «Домашний психолог» обрабатывает следующие данные:
+                    Сервис «Домашний психолог» обрабатывает:
                   </p>
                   <ul className="space-y-1.5 text-xs ml-4">
                     <li>• ID пользователя VK/OK (для авторизации)</li>
-                    <li>• Имя и фамилия (в VK, через VKWebAppGetUserInfo)</li>
-                    <li>• Текстовые описания ситуаций для ИИ-диагностики</li>
-                    <li>• История диагнозов и отметки о проработках</li>
-                    <li>• Тип браузера и устройство (для аналитики)</li>
+                    <li>• Имя и фамилия (в VK)</li>
+                    <li>• Тексты для ИИ-диагностики</li>
+                    <li>• История диагнозов</li>
+                    <li>• Тип браузера (для аналитики)</li>
                   </ul>
                   <p>
-                    Данные хранятся на сервере 90 дней, затем удаляются.
-                    Мы не передаём ваши данные третьим лицам, кроме ИИ-провайдера
-                    (для генерации диагнозов — только текст описания, без персональных данных).
-                  </p>
-                  <p>
-                    Полный текст политики доступен по кнопке ниже.
+                    Данные хранятся 90 дней. Не передаём третьим лицам,
+                    кроме ИИ-провайдера (только текст, без персональных данных).
                   </p>
                 </div>
-              </ScrollArea>
+              </div>
 
-              {/* Кнопки */}
-              <div className="p-5 border-t space-y-2">
+              {/* Кнопки — всегда видны внизу */}
+              <div className="p-4 sm:p-5 border-t space-y-2 shrink-0 bg-background">
+                <button
+                  onClick={handleAccept}
+                  className="w-full flex items-center justify-center gap-2 h-11 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors"
+                >
+                  <Check className="h-4 w-4" />
+                  Принимаю и продолжаю
+                </button>
                 <div className="flex gap-2">
-                  <Button
-                    onClick={handleAccept}
-                    className="flex-1"
-                    size="sm"
-                  >
-                    <Check className="h-4 w-4" />
-                    Принимаю и продолжаю
-                  </Button>
-                  <Button
+                  <button
                     onClick={handleDecline}
-                    variant="outline"
-                    size="sm"
+                    className="flex-1 h-10 rounded-lg border text-xs text-muted-foreground hover:bg-accent transition-colors"
                   >
                     Не принимаю
-                  </Button>
+                  </button>
+                  <button
+                    onClick={() => setShowFullPolicy(true)}
+                    className="flex-1 h-10 rounded-lg border text-xs text-primary hover:bg-primary/5 transition-colors"
+                  >
+                    Полная политика →
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowFullPolicy(true)}
-                  className="w-full text-xs text-primary underline underline-offset-2 hover:text-primary/80"
-                >
-                  Прочитать полную политику →
-                </button>
               </div>
             </motion.div>
           </motion.div>
