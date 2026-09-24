@@ -84,6 +84,19 @@ export function AiChat({
       setLoading(true);
 
       try {
+        // В DEMO-режиме — возвращаем предзаготовленный ответ без API
+        const IS_DEMO = process.env.NEXT_PUBLIC_STATIC_DEMO === "true";
+        if (IS_DEMO) {
+          await new Promise((r) => setTimeout(r, 800));
+          const demoReply: ChatMessage = {
+            role: "assistant",
+            content: "Я здесь. Дыши медленно. Что ты сейчас чувствуешь в теле?",
+            timestamp: Date.now(),
+          };
+          setMessages((prev) => [...prev, demoReply]);
+          return;
+        }
+
         const result = await safeJsonFetch<{ content: string }>("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -63,8 +63,10 @@ export function useDiagnosisHistory() {
         console.warn("[history] local load error:", e);
       }
 
-      // Если на платформе — загружаем с сервера и сливаем
-      const shouldSync = ready && platformUserId && (platform === "vk" || platform === "ok");
+      // Если на платформе И НЕ demo-режим — загружаем с сервера и сливаем
+      // В DEMO-режиме (статика без API) — только localStorage, без сети
+      const IS_DEMO = process.env.NEXT_PUBLIC_STATIC_DEMO === "true";
+      const shouldSync = !IS_DEMO && ready && platformUserId && (platform === "vk" || platform === "ok");
 
       if (shouldSync) {
         setSyncing(true);
@@ -135,6 +137,10 @@ export function useDiagnosisHistory() {
 
   // === Синхронизация с сервером (debounce 2 сек) ===
   const scheduleSync = useCallback((entries: HistoryEntry[]) => {
+    // В DEMO-режиме — не синхронизируем (нет API)
+    const IS_DEMO = process.env.NEXT_PUBLIC_STATIC_DEMO === "true";
+    if (IS_DEMO) return;
+
     // Только для платформ
     if (!platformUserId || (platform !== "vk" && platform !== "ok")) return;
 

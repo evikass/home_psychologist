@@ -199,6 +199,21 @@ function AiConsultantTab() {
       setLoading(true);
 
       try {
+        // В DEMO-режиме — возвращаем предзаготовленный ответ без API
+        const IS_DEMO = process.env.NEXT_PUBLIC_STATIC_DEMO === "true";
+        if (IS_DEMO) {
+          await new Promise((r) => setTimeout(r, 800));
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant" as const,
+              content: "Я здесь. Расскажи, с чем ты пришёл сегодня?",
+              timestamp: Date.now(),
+            },
+          ]);
+          return;
+        }
+
         const result = await safeJsonFetch<{ content: string }>("/api/consultant-chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
