@@ -161,21 +161,31 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       // (раньше использовался mailto: — но в VK/OK WebView это не работает,
       // модератор видел ошибку при нажатии «Отправить»)
       try {
-        // Определяем платформу
+        // Определяем платформу по URL параметрам
         const urlParams = new URLSearchParams(window.location.search);
-        const platform =
-          urlParams.has("vk_platform") || urlParams.has("vk_user_id") ? "vk" :
-          urlParams.has("signed_request") || urlParams.has("session_key") ? "ok" :
-          "web";
+        const hasVK = urlParams.has("vk_platform") || urlParams.has("vk_user_id");
+        const hasOK =
+          urlParams.has("signed_request") ||
+          urlParams.has("session_key") ||
+          (urlParams.has("api_server") &&
+            (urlParams.get("api_server")?.includes("ok.ru") ||
+             urlParams.get("api_server")?.includes("odnoklassniki.ru")));
+        const platform = hasVK ? "vk" : hasOK ? "ok" : "web";
         const platformUserId =
           urlParams.get("vk_user_id") ||
           urlParams.get("viewer_id") ||
           urlParams.get("uid") ||
+          urlParams.get("logged_user_id") ||
+          urlParams.get("user_id") ||
           "anonymous";
 
         // Отправляем заявку (fire-and-forget — не блокируем UI)
+        // Используем buildApiUrl из api-config — учитывает NEXT_PUBLIC_API_URL
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-        fetch(`${apiUrl}/api/psychologist-applications`, {
+        const url = apiUrl
+          ? `${apiUrl}/api/psychologist-applications`
+          : "/api/psychologist-applications";
+        fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
