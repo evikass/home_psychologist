@@ -63,15 +63,19 @@ export function useDiagnosisHistory() {
         console.warn("[history] local load error:", e);
       }
 
-      // Если на платформе И НЕ demo-режим — загружаем с сервера и сливаем
-      // В DEMO-режиме (статика без API) — только localStorage, без сети
-      const IS_DEMO = process.env.NEXT_PUBLIC_STATIC_DEMO === "true";
-      const shouldSync = !IS_DEMO && ready && platformUserId && (platform === "vk" || platform === "ok");
+      // Если на платформе — загружаем с сервера и сливаем
+      // ВАЖНО: синхронизация работает ВСЕГДА, даже в DEMO-режиме!
+      // /api/progress — быстрый endpoint (не требует Z.ai), должен работать.
+      // VK Rule 2.3.8: синхронизация прогресса между версиями обязательна.
+      const shouldSync = ready && platformUserId && (platform === "vk" || platform === "ok");
 
       if (shouldSync) {
         setSyncing(true);
         try {
-          const url = `/api/progress?platform=${encodeURIComponent(platform)}&userId=${encodeURIComponent(platformUserId)}`;
+          // Используем NEXT_PUBLIC_API_URL для cross-origin запросов
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+          const basePath = apiUrl ? `${apiUrl}/api/progress` : "/api/progress";
+          const url = `${basePath}?platform=${encodeURIComponent(platform)}&userId=${encodeURIComponent(platformUserId)}`;
           const res = await fetch(url);
           if (res.ok) {
             const data = await res.json() as { entries?: HistoryEntry[] };
@@ -137,11 +141,8 @@ export function useDiagnosisHistory() {
 
   // === Синхронизация с сервером (debounce 2 сек) ===
   const scheduleSync = useCallback((entries: HistoryEntry[]) => {
-    // В DEMO-режиме — не синхронизируем (нет API)
-    const IS_DEMO = process.env.NEXT_PUBLIC_STATIC_DEMO === "true";
-    if (IS_DEMO) return;
-
-    // Только для платформ
+    // Синхронизация работает ВСЕГДА для платформ (VK Rule 2.3.8)
+    // Даже в DEMO-режиме — /api/progress быстрый и не требует Z.ai
     if (!platformUserId || (platform !== "vk" && platform !== "ok")) return;
 
     // Сравниваем хеш — если ничего не изменилось, не синхронизируем
@@ -156,7 +157,11 @@ export function useDiagnosisHistory() {
     // Debounce 2 сек
     syncTimeoutRef.current = setTimeout(async () => {
       try {
-        const res = await fetch("/api/progress", {
+        // Используем buildApiUrl — учитывает NEXT_PUBLIC_API_URL
+        // (для VK Hosting фронтенд → Vercel API)
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const url = apiUrl ? `${apiUrl}/api/progress` : "/api/progress";
+        const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

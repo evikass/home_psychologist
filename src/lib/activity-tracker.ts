@@ -31,10 +31,7 @@ export type ActivityStats = {
 
 /** Записать событие на сервер */
 export function trackActivity(type: string, label: string, details?: string) {
-  // В DEMO-режиме — не отправляем (нет API)
-  const IS_DEMO = process.env.NEXT_PUBLIC_STATIC_DEMO === "true";
-  if (IS_DEMO) return;
-
+  // activity-tracker работает ВСЕГДА — короткий запрос, не требует Z.ai
   try {
     fetch(buildApiUrl("/api/activity"), {
       method: "POST",

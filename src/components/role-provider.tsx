@@ -160,10 +160,8 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       // Отправляем заявку на сервер через API
       // (раньше использовался mailto: — но в VK/OK WebView это не работает,
       // модератор видел ошибку при нажатии «Отправить»)
-      // В DEMO-режиме (статика без API) — не отправляем, просто сохраняем локально
-      const IS_DEMO = process.env.NEXT_PUBLIC_STATIC_DEMO === "true";
-      if (!IS_DEMO) {
-        try {
+      // Заявки отправляются ВСЕГДА — это короткий запрос, не требует Z.ai
+      try {
         // Определяем платформу по URL параметрам
         const urlParams = new URLSearchParams(window.location.search);
         const hasVK = urlParams.has("vk_platform") || urlParams.has("vk_user_id");
@@ -202,9 +200,8 @@ export function RoleProvider({ children }: { children: ReactNode }) {
         }).catch((e) => {
           console.warn("[applyAsPsychologist] Failed to submit application:", e);
         });
-        } catch (e) {
-          console.warn("[applyAsPsychologist] Error:", e);
-        }
+      } catch (e) {
+        console.warn("[applyAsPsychologist] Error:", e);
       }
     },
     [persist]
