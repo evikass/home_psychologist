@@ -31,13 +31,21 @@ export type ActivityStats = {
 
 /** Записать событие на сервер */
 export function trackActivity(type: string, label: string, details?: string) {
-  // activity-tracker работает ВСЕГДА — короткий запрос, не требует Z.ai
+  // На платформах VK/OK не отправляем аналитику на Vercel — недоступен
+  // На web — отправляем
+  const urlParams = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search)
+    : null;
+  const isPlatform = urlParams?.has("vk_platform") || urlParams?.has("vk_user_id") ||
+    urlParams?.has("signed_request") || urlParams?.has("session_key");
+  if (isPlatform) return;
+
   try {
     fetch(buildApiUrl("/api/activity"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type, label, details }),
-    }).catch(() => {}); // silently fail — не блокируем UI
+    }).catch(() => {});
   } catch {}
 }
 

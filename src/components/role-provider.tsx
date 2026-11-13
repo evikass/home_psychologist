@@ -139,7 +139,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   }, [persist]);
 
   const applyAsPsychologist = useCallback(
-    (data: {
+    async (data: {
       name: string;
       email: string;
       specialization: string;
@@ -157,12 +157,10 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       setProfileState(newProfile);
       persist(newProfile);
 
-      // Отправляем заявку на сервер через API
-      // (раньше использовался mailto: — но в VK/OK WebView это не работает,
-      // модератор видел ошибку при нажатии «Отправить»)
-      // Заявки отправляются ВСЕГДА — это короткий запрос, не требует Z.ai
+      // Отправляем заявку через платформенный storage (VK Storage / OK FAPI)
+      // или через API если на web
+      // (раньше использовался mailto: — но в VK/OK WebView это не работает)
       try {
-        // Определяем платформу по URL параметрам
         const urlParams = new URLSearchParams(window.location.search);
         const hasVK = urlParams.has("vk_platform") || urlParams.has("vk_user_id");
         const hasOK =
@@ -171,35 +169,37 @@ export function RoleProvider({ children }: { children: ReactNode }) {
           (urlParams.has("api_server") &&
             (urlParams.get("api_server")?.includes("ok.ru") ||
              urlParams.get("api_server")?.includes("odnoklassniki.ru")));
-        const platform = hasVK ? "vk" : hasOK ? "ok" : "web";
-        const platformUserId =
-          urlParams.get("vk_user_id") ||
-          urlParams.get("viewer_id") ||
-          urlParams.get("uid") ||
-          urlParams.get("logged_user_id") ||
-          urlParams.get("user_id") ||
-          "anonymous";
 
-        // Отправляем заявку (fire-and-forget — не блокируем UI)
-        // Используем buildApiUrl из api-config — учитывает NEXT_PUBLIC_API_URL
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-        const url = apiUrl
-          ? `${apiUrl}/api/psychologist-applications`
-          : "/api/psychologist-applications";
-        fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        if (hasVK || hasOK) {
+          // Платформа — используем встроенный storage (без внешнего сервера)
+          const { savePsychologistApplication } = await import("@/lib/platform-storage");
+          await savePsychologistApplication({
             name: data.name,
             email: data.email,
             specialization: data.specialization,
             experience: data.experience,
-            platform,
-            platformUserId,
-          }),
-        }).catch((e) => {
-          console.warn("[applyAsPsychologist] Failed to submit application:", e);
-        });
+          });
+        } else {
+          // Web — используем API (если доступен)
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+          const url = apiUrl
+            ? `${apiUrl}/api/psychologist-applications`
+            : "/api/psychologist-applications";
+          fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: data.name,
+              email: data.email,
+              specialization: data.specialization,
+              experience: data.experience,
+              platform: "web",
+              platformUserId: "anonymous",
+            }),
+          }).catch((e) => {
+            console.warn("[applyAsPsychologist] Failed to submit application:", e);
+          });
+        }
       } catch (e) {
         console.warn("[applyAsPsychologist] Error:", e);
       }

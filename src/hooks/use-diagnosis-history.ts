@@ -63,49 +63,48 @@ export function useDiagnosisHistory() {
         console.warn("[history] local load error:", e);
       }
 
-      // Если на платформе — загружаем с сервера и сливаем
-      // ВАЖНО: синхронизация работает ВСЕГДА, даже в DEMO-режиме!
-      // /api/progress — быстрый endpoint (не требует Z.ai), должен работать.
+      // Если на платформе — используем встроенный storage VK/OK
+      // (VKWebAppStorage / OK FAPI storage) — работает без внешнего сервера,
+      // без CORS, синхронизируется между устройствами автоматически.
       // VK Rule 2.3.8: синхронизация прогресса между версиями обязательна.
-      const shouldSync = ready && platformUserId && (platform === "vk" || platform === "ok");
+      const shouldUsePlatformStorage = ready && (platform === "vk" || platform === "ok");
 
-      if (shouldSync) {
+      if (shouldUsePlatformStorage) {
         setSyncing(true);
         try {
-          // Используем NEXT_PUBLIC_API_URL для cross-origin запросов
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-          const basePath = apiUrl ? `${apiUrl}/api/progress` : "/api/progress";
-          const url = `${basePath}?platform=${encodeURIComponent(platform)}&userId=${encodeURIComponent(platformUserId)}`;
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json() as { entries?: HistoryEntry[] };
-            if (Array.isArray(data.entries)) {
-              // Сливаем: серверные записи + локальные, дедуплицируем по id
-              const serverEntries = data.entries;
-              const allMap = new Map<string, HistoryEntry>();
+          // Загружаем из платформенного storage (VK Storage / OK Storage)
+          const { loadProgress } = await import("@/lib/platform-storage");
+          const serverEntries = await loadProgress();
 
-              // Серверные — приоритет (т.к. это с другого устройства)
-              for (const e of serverEntries) allMap.set(e.id, e);
-              // Локальные дополняют (если их нет на сервере)
-              for (const e of localEntries) {
-                if (!allMap.has(e.id)) allMap.set(e.id, e);
-              }
+          if (Array.isArray(serverEntries) && serverEntries.length > 0) {
+            // Сливаем: серверные записи + локальные, дедуплицируем по id
+            const allMap = new Map<string, HistoryEntry>();
 
-              // Сортируем по timestamp (новые сверху)
-              const merged = Array.from(allMap.values())
-                .sort((a, b) => b.timestamp - a.timestamp)
-                .slice(0, MAX_ENTRIES);
-
-              if (mounted) {
-                setHistory(merged);
-                // Обновляем localStorage слитым результатом
-                try {
-                  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-                } catch {}
-                // Запоминаем хеш — чтобы не синхронизировать то же самое обратно
-                lastSyncedHashRef.current = JSON.stringify(merged);
-              }
+            // Серверные — приоритет (т.к. это с другого устройства)
+            for (const e of serverEntries) allMap.set(e.id, e);
+            // Локальные дополняют (если их нет на сервере)
+            for (const e of localEntries) {
+              if (!allMap.has(e.id)) allMap.set(e.id, e);
             }
+
+            // Сортируем по timestamp (новые сверху)
+            const merged = Array.from(allMap.values())
+              .sort((a, b) => b.timestamp - a.timestamp)
+              .slice(0, MAX_ENTRIES);
+
+            if (mounted) {
+              setHistory(merged);
+              // Обновляем localStorage слитым результатом
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+              } catch {}
+              // Запоминаем хеш — чтобы не синхронизировать то же самое обратно
+              lastSyncedHashRef.current = JSON.stringify(merged);
+            }
+          } else if (mounted) {
+            // На сервере пусто — используем локальные
+            setHistory(localEntries);
+            lastSyncedHashRef.current = JSON.stringify(localEntries);
           }
         } catch (e) {
           console.warn("[history] server load error:", e);
@@ -139,11 +138,11 @@ export function useDiagnosisHistory() {
     }
   }, []);
 
-  // === Синхронизация с сервером (debounce 2 сек) ===
+  // === Синхронизация с платформенным storage (debounce 2 сек) ===
   const scheduleSync = useCallback((entries: HistoryEntry[]) => {
-    // Синхронизация работает ВСЕГДА для платформ (VK Rule 2.3.8)
-    // Даже в DEMO-режиме — /api/progress быстрый и не требует Z.ai
-    if (!platformUserId || (platform !== "vk" && platform !== "ok")) return;
+    // Синхронизация работает для платформ VK/OK через встроенный storage
+    // VKWebAppStorageSetKey / OK FAPI storage — без внешнего сервера
+    if (platform !== "vk" && platform !== "ok") return;
 
     // Сравниваем хеш — если ничего не изменилось, не синхронизируем
     const newHash = JSON.stringify(entries);
@@ -157,25 +156,11 @@ export function useDiagnosisHistory() {
     // Debounce 2 сек
     syncTimeoutRef.current = setTimeout(async () => {
       try {
-        // Используем buildApiUrl — учитывает NEXT_PUBLIC_API_URL
-        // (для VK Hosting фронтенд → Vercel API)
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-        const url = apiUrl ? `${apiUrl}/api/progress` : "/api/progress";
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            platform,
-            userId: platformUserId,
-            entries,
-          }),
-        });
-        if (res.ok) {
-          lastSyncedHashRef.current = newHash;
-          console.log("[history] synced to server:", entries.length, "entries");
-        } else {
-          console.warn("[history] sync failed:", res.status);
-        }
+        // Используем платформенный storage (VK/OK встроенный)
+        const { saveProgress } = await import("@/lib/platform-storage");
+        await saveProgress(entries as unknown as Parameters<typeof saveProgress>[0]);
+        lastSyncedHashRef.current = newHash;
+        console.log("[history] synced to platform storage:", entries.length, "entries");
       } catch (e) {
         console.warn("[history] sync error:", e);
       }
